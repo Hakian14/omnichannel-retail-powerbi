@@ -100,7 +100,7 @@ erDiagram
 | `dim_date` | one day | 731 | 2024-01-01 → 2025-12-31. **Marked as date table.** Carries Tet and public-holiday flags. |
 | `dim_store` | one selling location | 15 | 12 physical stores + Website + Mobile app + Marketplace. `channel_type` ∈ {Store, Online}. Two stores opened mid-window (S08 Aug-2024, S12 Mar-2025) — used by the same-store-growth measure. |
 | `dim_product` | one SKU (style × colour) | 320 | 3 categories, 14 subcategories, SS/FW season flag. |
-| `dim_customer` | one loyalty member | 12,001 | Row 0 = `WALK-IN` for unidentified store transactions. |
+| `dim_customer` | one loyalty member | 90,001 | Row 0 = `WALK-IN` for unidentified store transactions. Purchase frequency is heavy-tailed and rises with tier (Gold ≈ 5 transactions/yr, Member ≈ 1.4). |
 | `fact_sales` | one transaction line | 548k | 320k transactions. `net_sales = unit_price × quantity − discount_amount`. |
 | `fact_inventory` | store × SKU × **month-end snapshot** | 85k | Semi-additive: never SUM across dates. Physical stores only. |
 | `fact_targets` | store × month | 339 | Monthly sales targets. Joins to `dim_date` through `year_month`. |

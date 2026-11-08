@@ -21,6 +21,7 @@ import numpy as np
 import pandas as pd
 
 SEED = 7
+CUSTOMER_BASE = 90_000      # loyalty members in dim_customer
 START = date(2024, 1, 1)
 END = date(2025, 12, 31)
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "star_schema")
@@ -111,23 +112,48 @@ def gen_dim_product(rng) -> pd.DataFrame:
 
 
 def gen_dim_customer(rng, n=12000) -> pd.DataFrame:
-    tiers = rng.choice(["Member", "Silver", "Gold"], size=n, p=[0.70, 0.22, 0.08])
-    join = [START - timedelta(days=int(x)) for x in rng.integers(-700, 1500, size=n)]
+    """Loyalty members. The member base is generated from its own RNG stream (seeded) so that
+    changing its size or mix does not alter the sales figures, which come from the main stream."""
+    # Draws on the main stream kept from the first version (12,000-member base) so the sales
+    # figures documented in README/report_spec do not move when the member base changes.
+    rng.choice(["Member", "Silver", "Gold"], size=n, p=[0.70, 0.22, 0.08])
+    rng.integers(-700, 1500, size=n)
+    rng.choice(["F", "M"], size=n, p=[0.62, 0.38])
+    rng.choice(["18-24", "25-34", "35-44", "45+"], size=n, p=[0.20, 0.42, 0.28, 0.10])
+    rng.choice([s[4] for s in STORES[:12]], size=n)
+    r = np.random.default_rng(SEED + 1)
+    n = CUSTOMER_BASE
+    tiers = r.choice(["Member", "Silver", "Gold"], size=n, p=[0.72, 0.21, 0.07])
+    join = [START - timedelta(days=int(x)) for x in r.integers(-700, 1500, size=n)]
     df = pd.DataFrame({
         "customer_key": np.arange(1, n + 1), "customer_id": [f"CUST{100000 + i}" for i in range(n)],
-        "loyalty_tier": tiers, "gender": rng.choice(["F", "M"], size=n, p=[0.62, 0.38]),
-        "age_band": rng.choice(["18-24", "25-34", "35-44", "45+"], size=n, p=[0.20, 0.42, 0.28, 0.10]),
-        "city": rng.choice([s[4] for s in STORES[:12]], size=n), "join_date": [min(d, END).isoformat() for d in join],
+        "loyalty_tier": tiers, "gender": r.choice(["F", "M"], size=n, p=[0.62, 0.38]),
+        "age_band": r.choice(["18-24", "25-34", "35-44", "45+"], size=n, p=[0.20, 0.42, 0.28, 0.10]),
+        "city": r.choice([s[4] for s in STORES[:12]], size=n), "join_date": [min(d, END).isoformat() for d in join],
     })
     walk_in = pd.DataFrame([{"customer_key": 0, "customer_id": "WALK-IN", "loyalty_tier": "Non-member", "gender": "unknown",
                              "age_band": "unknown", "city": "unknown", "join_date": None}])
     return pd.concat([walk_in, df], ignore_index=True)
 
 
+def customer_sampler(customers: pd.DataFrame):
+    """Purchase frequency is heavy-tailed and rises with tier: Gold members shop far more often
+    than Members. Returns a function drawing one customer_key per identified transaction."""
+    r = np.random.default_rng(SEED + 2)
+    members = customers[customers["customer_key"] > 0]
+    tier_mult = members["loyalty_tier"].map({"Member": 1.0, "Silver": 3.0, "Gold": 8.0}).to_numpy()
+    w = tier_mult * (r.pareto(2.5, size=len(members)) + 1)
+    w = w / w.sum()
+    keys = members["customer_key"].to_numpy()
+    cdf = np.cumsum(w)
+    return lambda: int(keys[min(np.searchsorted(cdf, r.random()), len(keys) - 1)])
+
+
 def gen_fact_sales(rng, dates: pd.DataFrame, stores: pd.DataFrame, products: pd.DataFrame, customers: pd.DataFrame):
     prod_w = rng.pareto(1.5, size=len(products)) + 1
     prod_w /= prod_w.sum()
     season_of = products["season"].to_numpy()
+    pick_customer = customer_sampler(customers)
     rows = []
     txn = 0
     open_dates = [datetime.fromisoformat(s[8].isoformat()).date() for s in STORES]
@@ -153,7 +179,14 @@ def gen_fact_sales(rng, dates: pd.DataFrame, stores: pd.DataFrame, products: pd.
                 tid = f"T{txn:08d}"
                 n_lines = rng.choice([1, 2, 3, 4], p=[0.52, 0.30, 0.13, 0.05])
                 # loyalty identification: online always known; stores ~45%
-                ck = int(rng.integers(1, len(customers))) if (online or rng.random() < 0.45) else 0
+                # loyalty identification: online always known; stores ~45%. The rng.integers draw is
+                # kept from the first version so the main stream (and every sales figure) is unchanged;
+                # the customer key itself comes from the heavy-tailed sampler.
+                if online or rng.random() < 0.45:
+                    rng.integers(1, 12001)
+                    ck = pick_customer()
+                else:
+                    ck = 0
                 # seasonal product mix: FW sells in Oct-Feb
                 fw_bias = 1.6 if d.month in (10, 11, 12, 1, 2) else 0.6
                 w = prod_w * np.where(season_of == "FW", fw_bias, 1.0)

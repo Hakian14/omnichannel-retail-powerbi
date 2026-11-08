@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Omnichannel Retail Dashboard</title>
+<meta name="description" content="Interactive omnichannel fashion-retail dashboard: sales, channels, stores, inventory and loyalty. Web rendition of a Power BI semantic model.">
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+<style>
+  :root{
+    --page:#f9f9f7; --card:#ffffff; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781; --grid:#e1e0d9; --axis:#c3c2b7;
+    --blue:#2a78d6; --orange:#eb6834; --aqua:#1baf7a; --yellow:#eda100; --magenta:#e87ba4; --green:#008300;
+    --good:#0ca30c; --bad:#d03b3b; --ly:#c3c2b7;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--page);color:var(--ink);font-family:"Segoe UI",system-ui,-apple-system,sans-serif;font-size:14px}
+  header{padding:18px 24px 8px}
+  header h1{margin:0;font-size:22px;font-weight:600}
+  header .sub{color:var(--muted);font-size:13px;margin-top:4px}
+  header .sub a{color:var(--ink2)}
+  .bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:8px 24px 12px;border-bottom:1px solid var(--grid);background:var(--page);position:sticky;top:0;z-index:5}
+  .bar label{font-size:12px;color:var(--ink2);display:flex;flex-direction:column;gap:3px}
+  .bar select{font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--grid);border-radius:6px;background:var(--card);color:var(--ink);min-width:150px}
+  .bar button{font:inherit;font-size:13px;padding:7px 12px;border:1px solid var(--grid);border-radius:6px;background:var(--card);color:var(--ink2);cursor:pointer;margin-top:17px}
+  .bar button:hover{border-color:var(--axis)}
+  nav{display:flex;gap:4px;padding:10px 24px 0;flex-wrap:wrap}
+  nav button{font:inherit;font-size:13px;padding:8px 14px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--ink2);cursor:pointer}
+  nav button.active{color:var(--ink);border-bottom-color:var(--blue);font-weight:600}
+  main{padding:16px 24px 32px}
+  .page{display:none}.page.active{display:block}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:14px}
+  .kpi{background:var(--card);border:1px solid var(--grid);border-radius:6px;padding:12px 14px}
+  .kpi .t{font-size:12px;color:var(--ink2)}
+  .kpi .v{font-size:26px;font-weight:600;margin:4px 0 2px;letter-spacing:-.01em}
+  .kpi .s{font-size:12px;color:var(--ink2)}
+  .kpi .s.good{color:var(--good)}.kpi .s.bad{color:var(--bad)}
+  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
+  .card{background:var(--card);border:1px solid var(--grid);border-radius:6px;padding:10px 12px 6px;min-width:0}
+  .card h3{margin:0 0 2px;font-size:13px;font-weight:600}
+  .card .note{font-size:11px;color:var(--muted);margin:0 0 4px}
+  .c12{grid-column:span 12}.c8{grid-column:span 8}.c6{grid-column:span 6}.c4{grid-column:span 4}.c7{grid-column:span 7}.c5{grid-column:span 5}
+  @media (max-width:1000px){.c8,.c6,.c4,.c7,.c5{grid-column:span 12}}
+  .plot{width:100%;height:300px}
+  .plot.tall{height:380px}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{text-align:right;padding:6px 8px;border-bottom:1px solid var(--grid);white-space:nowrap}
+  th:first-child,td:first-child{text-align:left}
+  th{color:var(--ink2);font-weight:600;background:var(--card);position:sticky;top:0}
+  .tbl{max-height:360px;overflow:auto}
+  .pill{display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px}
+  .pill.good{background:#e6f6e6;color:#0a5a0a}.pill.bad{background:#fde9e9;color:#8d1f1f}
+  footer{padding:8px 24px 24px;color:var(--muted);font-size:12px}
+  #loading{padding:40px 24px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Omnichannel Retail — Executive Dashboard</h1>
+  <div class="sub" id="subtitle">Loading data…</div>
+</header>
+
+<div class="bar">
+  <label>Year <select id="fYear"></select></label>
+  <label>Region <select id="fRegion"><option>All</option><option>North</option><option>Central</option><option>South</option><option>Online</option></select></label>
+  <label>Channel <select id="fChannel"><option>All</option><option>Physical store</option><option>Website</option><option>Mobile app</option><option>Marketplace</option></select></label>
+  <label>Category <select id="fCategory"><option>All</option><option>Women</option><option>Men</option><option>Kids</option></select></label>
+  <button id="reset">Reset filters</button>
+</div>
+
+<nav id="tabs">
+  <button data-page="p1" class="active">Executive Overview</button>
+  <button data-page="p2">Channel Performance</button>
+  <button data-page="p3">Store Performance</button>
+  <button data-page="p4">Product &amp; Inventory</button>
+  <button data-page="p5">Customers &amp; Loyalty</button>
+</nav>
+
+<div id="loading">Loading data…</div>
+<main id="main" style="display:none">
+
+<section class="page active" id="p1">
+  <div class="kpis" id="k1"></div>
+  <div class="grid">
+    <div class="card c7"><h3>Net sales by month vs last year</h3><p class="note">Billion VND · delivered sales lines</p><div class="plot" id="c1a"></div></div>
+    <div class="card c5"><h3>Net sales vs target by region</h3><p class="note" id="n1b">Billion VND · targets are set per store and month</p><div class="plot" id="c1b"></div></div>
+    <div class="card c4"><h3>Channel mix by year</h3><p class="note">Share of net sales</p><div class="plot" id="c1c"></div></div>
+    <div class="card c4"><h3>Net sales by category vs last year</h3><p class="note">Billion VND</p><div class="plot" id="c1d"></div></div>
+    <div class="card c4"><h3>Locations furthest from target</h3><p class="note">Target achievement, selected year</p><div class="tbl" id="t1e"></div></div>
+  </div>
+</section>
+
+<section class="page" id="p2">
+  <div class="kpis" id="k2"></div>
+  <div class="grid">
+    <div class="card c8"><h3>Monthly net sales by channel</h3><p class="note">Billion VND</p><div class="plot" id="c2a"></div></div>
+    <div class="card c4"><h3>Average basket value by channel</h3><p class="note">Thousand VND per transaction</p><div class="plot" id="c2b"></div></div>
+    <div class="card c6"><h3>Discount rate vs gross margin by location</h3><p class="note">Bubble size = net sales</p><div class="plot" id="c2c"></div></div>
+    <div class="card c6"><h3>Daily net sales through Tet</h3><p class="note">Jan–Feb of the selected year · shaded = Tet holiday</p><div class="plot" id="c2d"></div></div>
+  </div>
+</section>
+
+<section class="page" id="p3">
+  <div class="kpis" id="k3"></div>
+  <div class="grid">
+    <div class="card c12"><h3>Store league table</h3><p class="note" id="n3a">Sorted by target achievement · physical stores and online channels</p><div class="tbl" id="t3a"></div></div>
+    <div class="card c6"><h3>Sales per square metre</h3><p class="note">Million VND per sqm · physical stores</p><div class="plot tall" id="c3b"></div></div>
+    <div class="card c6"><h3>Conversion rate vs footfall</h3><p class="note">Physical stores · bubble size = net sales</p><div class="plot tall" id="c3c"></div></div>
+    <div class="card c12"><h3>Target achievement by location and month</h3><p class="note">Diverging around 100% · blue above target, red below</p><div class="plot tall" id="c3d"></div></div>
+  </div>
+</section>
+
+<section class="page" id="p4">
+  <div class="kpis" id="k4"></div>
+  <div class="grid">
+    <div class="card c6"><h3>Sell-through by subcategory</h3><p class="note">Units sold ÷ (units sold + closing stock) · physical stores</p><div class="plot tall" id="c4a"></div></div>
+    <div class="card c6"><h3>Weeks of cover by season</h3><p class="note">Closing stock ÷ average weekly units · dashed = 6-week target</p><div class="plot tall" id="c4b"></div></div>
+    <div class="card c6"><h3>Top 10 SKUs by net sales</h3><p class="note">Selected year</p><div class="tbl" id="t4c"></div></div>
+    <div class="card c6"><h3>Bottom 10 SKUs by sell-through</h3><p class="note">Candidates for markdown</p><div class="tbl" id="t4d"></div></div>
+    <div class="card c12"><h3>Net sales by category and subcategory</h3><p class="note">Billion VND</p><div class="plot tall" id="c4e"></div></div>
+  </div>
+</section>
+
+<section class="page" id="p5">
+  <div class="kpis" id="k5"></div>
+  <div class="grid">
+    <div class="card c6"><h3>Identified sales share by channel</h3><p class="note">Share of net sales tied to a known customer</p><div class="plot" id="c5a"></div></div>
+    <div class="card c6"><h3>Repeat rate by loyalty tier</h3><p class="note">Customers with 2+ transactions in the year</p><div class="plot" id="c5b"></div></div>
+    <div class="card c6"><h3>Identified sales by age band</h3><p class="note">Billion VND · all stores (not store-filterable)</p><div class="plot" id="c5c"></div></div>
+    <div class="card c6"><h3>New loyalty members by month</h3><p class="note">Sign-ups</p><div class="plot" id="c5d"></div></div>
+  </div>
+</section>
+
+</main>
+<footer id="footer"></footer>
+
+<script>
+// ------------------------------------------------------------------ data loading
+const FILES = ["meta","stores","sales","transactions","daily","targets","footfall","inventory","customers","customers_total","age_mix","members","skus"];
+const DATA = {};
+const C = {blue:"#2a78d6",orange:"#eb6834",aqua:"#1baf7a",yellow:"#eda100",magenta:"#e87ba4",green:"#008300",ly:"#c3c2b7",good:"#0ca30c",bad:"#d03b3b",ink:"#0b0b0b",ink2:"#52514e",muted:"#898781",grid:"#e1e0d9"};
+const CHANNEL_COLOR = {"Physical store":C.blue,"Website":C.orange,"Mobile app":C.aqua,"Marketplace":C.yellow};
+const CAT_COLOR = {"Women":C.blue,"Men":C.orange,"Kids":C.aqua};
+const SEASON_COLOR = {"SS":C.blue,"FW":C.orange};
+const TET = {2024:["2024-02-05","2024-02-14"],2025:["2025-01-25","2025-02-02"]};
+
+function toObjects(p){ return p.rows.map(r => Object.fromEntries(p.columns.map((c,i)=>[c,r[i]]))); }
+async function load(){
+  const results = await Promise.all(FILES.map(f => fetch(`data/${f}.json`).then(r=>{ if(!r.ok) throw new Error(f); return r.json(); })));
+  FILES.forEach((f,i)=>{ DATA[f] = f==="meta" ? results[i] : toObjects(results[i]); });
+  DATA.storeByKey = Object.fromEntries(DATA.stores.map(s=>[s.store_key,s]));
+  init();
+}
+
+// ------------------------------------------------------------------ filters
+const F = {year:2025, region:"All", channel:"All", category:"All"};
+const $ = id => document.getElementById(id);
+function storeOk(sk, f=F){
+  const s = DATA.storeByKey[sk]; if(!s) return false;
+  if(f.region!=="All" && s.region!==f.region) return false;
+  if(f.channel!=="All" && s.channel!==f.channel) return false;
+  return true;
+}
+const inYear = (ym, y) => ym.startsWith(String(y));
+function salesRows(f=F, year=f.year){
+  return DATA.sales.filter(r => inYear(r.ym, year) && storeOk(r.store_key, f) && (f.category==="All" || r.category===f.category));
+}
+const sum = (rows, k) => rows.reduce((a,r)=>a+(+r[k]||0),0);
+
+// ------------------------------------------------------------------ measures (mirror model/measures.dax)
+function netSales(f=F, year=f.year){ return sum(salesRows(f,year),"net"); }
+function grossMarginPct(f=F){ const r=salesRows(f); const n=sum(r,"net"); return n? 1-sum(r,"cost")/n : null; }
+function discountRate(rows){ const g=sum(rows,"gross"); return g? (g-sum(rows,"net"))/g : null; }
+function targetAchievement(f=F){
+  const t = sum(DATA.targets.filter(r=>inYear(r.ym,f.year)&&storeOk(r.store_key,f)),"sales_target");
+  const n = sum(DATA.sales.filter(r=>inYear(r.ym,f.year)&&storeOk(r.store_key,f)),"net");   // targets are not category-specific
+  return t? n/t : null;
+}
+function onlineShare(f=F){
+  const rows = DATA.sales.filter(r=>inYear(r.ym,f.year)&&storeOk(r.store_key,{...f,channel:"All"})&&(f.category==="All"||r.category===f.category));
+  const n=sum(rows,"net"); if(!n) return null;
+  return sum(rows.filter(r=>DATA.storeByKey[r.store_key].channel_type==="Online"),"net")/n;
+}
+function sameStoreGrowth(f=F){
+  const cutoff = `${f.year-1}-01-01`;
+  const comp = DATA.stores.filter(s=>s.channel_type==="Store" && s.open_date<=cutoff && storeOk(s.store_key,f)).map(s=>s.store_key);
+  const cur = sum(DATA.sales.filter(r=>inYear(r.ym,f.year)&&comp.includes(r.store_key)&&(f.category==="All"||r.category===f.category)),"net");
+  const ly  = sum(DATA.sales.filter(r=>inYear(r.ym,f.year-1)&&comp.includes(r.store_key)&&(f.category==="All"||r.category===f.category)),"net");
+  return ly? {g:cur/ly-1, n:comp.length} : {g:null,n:comp.length};
+}
+function txRows(f=F, year=f.year){ return DATA.transactions.filter(r=>inYear(r.ym,year)&&storeOk(r.store_key,f)); }
+function conversion(f=F){
+  const stores = f.channel==="All"||f.channel==="Physical store";
+  if(!stores) return null;
+  const sf = {...f, channel:"Physical store"};
+  const tx = sum(txRows(sf),"transactions"); const ff = sum(DATA.footfall.filter(r=>inYear(r.ym,f.year)&&storeOk(r.store_key,sf)),"footfall");
+  return ff? tx/ff : null;
+}
+function inventoryAt(f, ym){ return DATA.inventory.filter(r=>r.ym===ym && storeOk(r.store_key,f) && (f.category==="All"||r.category===f.category)); }
+function lastSnapshot(f=F){ const yms=DATA.inventory.filter(r=>inYear(r.ym,f.year)).map(r=>r.ym); return yms.length? yms.sort().slice(-1)[0] : null; }
+function storeUnits(f=F){ return sum(salesRows({...f,channel:f.channel==="All"?"Physical store":f.channel}).filter(r=>DATA.storeByKey[r.store_key].channel_type==="Store"),"units"); }
+function sellThrough(f=F){ const u=storeUnits(f); const ym=lastSnapshot(f); const soh=ym? sum(inventoryAt(f,ym),"soh"):0; return (u+soh)? u/(u+soh):null; }
+function weeksOfCover(f=F){ const u=storeUnits(f); const ym=lastSnapshot(f); const soh=ym? sum(inventoryAt(f,ym),"soh"):0; const weeks=52.14; return u? soh/(u/weeks):null; }
+const fmtB = v => v==null? "–" : (v/1e9).toFixed(1)+" B";
+const fmtM = v => v==null? "–" : (v/1e6).toFixed(1)+" M";
+const fmtK = v => v==null? "–" : Math.round(v/1e3).toLocaleString()+" K";
+const pct = (v,d=1) => v==null? "–" : (v*100).toFixed(d)+"%";
+const sgn = (v,d=1) => v==null? "–" : (v>=0?"+":"")+(v*100).toFixed(d)+"%";
+const num = v => v==null? "–" : Math.round(v).toLocaleString();
+
+// ------------------------------------------------------------------ plot helpers
+const BASE = {paper_bgcolor:"#ffffff", plot_bgcolor:"#ffffff", font:{family:"Segoe UI, system-ui, sans-serif", size:12, color:C.ink2},
+  margin:{l:48,r:12,t:8,b:36}, xaxis:{gridcolor:C.grid, zerolinecolor:C.grid, linecolor:"#c3c2b7"}, yaxis:{gridcolor:C.grid, zerolinecolor:C.grid},
+  legend:{orientation:"h", y:1.12, x:0, font:{size:11}}, hoverlabel:{bgcolor:"#0b0b0b", font:{color:"#fff"}}};
+const CFG = {displayModeBar:false, responsive:true};
+function plot(id, traces, layout={}){ Plotly.react($(id), traces, deepMerge(structuredClone(BASE), layout), CFG); }
+function deepMerge(a,b){ for(const k in b){ if(b[k]&&typeof b[k]==="object"&&!Array.isArray(b[k])){ a[k]=deepMerge(a[k]||{},b[k]); } else a[k]=b[k]; } return a; }
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function monthly(rows, key="net"){ const out=new Array(12).fill(0); rows.forEach(r=>{ out[+r.ym.slice(5)-1]+= +r[key]; }); return out; }
+function kpi(title, value, sub, cls=""){ return `<div class="kpi"><div class="t">${title}</div><div class="v">${value}</div><div class="s ${cls}">${sub||""}</div></div>`; }
+function table(el, cols, rows){ el.innerHTML = `<table><thead><tr>${cols.map(c=>`<th>${c}</th>`).join("")}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(v=>`<td>${v}</td>`).join("")}</tr>`).join("")}</tbody></table>`; }
+const by = (rows, keyFn) => { const m=new Map(); rows.forEach(r=>{ const k=keyFn(r); if(!m.has(k)) m.set(k,[]); m.get(k).push(r); }); return m; };
+
+// ------------------------------------------------------------------ page 1
+function renderP1(){
+  const net=netSales(), ly=netSales(F,F.year-1), gm=grossMarginPct(), ta=targetAchievement(), os=onlineShare(), ss=sameStoreGrowth();
+  $("k1").innerHTML = kpi("Net Sales", fmtB(net)+" VND", ly? `${sgn(net/ly-1)} vs LY`:"no LY data", ly? (net>=ly?"good":"bad"):"")
+    + kpi("Gross Margin %", pct(gm), "target 55%", gm>=0.55?"good":"bad")
+    + kpi("Target Achievement", pct(ta), ta==null?"":`${sgn(ta-1,1)} vs plan${F.category!=="All"?" · all categories":""}`, ta>=1?"good":"bad")
+    + kpi("Online Share", pct(os), "Website + App + Marketplace")
+    + kpi("Same-Store Sales Growth", sgn(ss.g), `${ss.n} comparable stores`, ss.g>=0?"good":"bad");
+
+  const cur=monthly(salesRows()), prev=monthly(salesRows(F,F.year-1));
+  plot("c1a",[{x:MONTHS,y:prev.map(v=>v/1e9),name:`${F.year-1}`,mode:"lines",line:{color:C.ly,width:2},hovertemplate:"%{y:.2f} B<extra>"+(F.year-1)+"</extra>"},
+             {x:MONTHS,y:cur.map(v=>v/1e9),name:`${F.year}`,mode:"lines+markers",line:{color:C.blue,width:2.5},marker:{size:6},hovertemplate:"%{y:.2f} B<extra>"+F.year+"</extra>"}],
+       {yaxis:{rangemode:"tozero"}});
+
+  const regions=["North","South","Central","Online"].filter(r=>F.region==="All"||F.region===r);
+  const netR=regions.map(r=>sum(DATA.sales.filter(x=>inYear(x.ym,F.year)&&storeOk(x.store_key,{...F,region:r})),"net")/1e9);
+  const tgtR=regions.map(r=>sum(DATA.targets.filter(x=>inYear(x.ym,F.year)&&storeOk(x.store_key,{...F,region:r})),"sales_target")/1e9);
+  plot("c1b",[{type:"bar",orientation:"h",y:regions,x:tgtR,name:"Target",marker:{color:C.ly},hovertemplate:"%{x:.1f} B<extra>Target</extra>"},
+              {type:"bar",orientation:"h",y:regions,x:netR,name:"Net Sales",marker:{color:C.blue},text:netR.map((v,i)=>tgtR[i]?pct(v/tgtR[i],0):""),textposition:"outside",textfont:{color:C.ink2},hovertemplate:"%{x:.1f} B<extra>Net Sales</extra>"}],
+       {barmode:"group",bargap:0.3,yaxis:{autorange:"reversed",gridcolor:"#fff"},margin:{l:60,r:40}});
+  $("n1b").textContent = F.category==="All" ? "Billion VND · targets are set per store and month" : "Billion VND · targets are not category-specific: all categories shown";
+
+  const years=DATA.meta.years; const chans=Object.keys(CHANNEL_COLOR).filter(c=>F.channel==="All"||F.channel===c);
+  const mix = years.map(y=>{ const rows=DATA.sales.filter(r=>inYear(r.ym,y)&&storeOk(r.store_key,{...F,channel:"All"})&&(F.category==="All"||r.category===F.category)); const tot=sum(rows,"net"); return chans.map(c=>tot? sum(rows.filter(r=>DATA.storeByKey[r.store_key].channel===c),"net")/tot:0); });
+  plot("c1c", chans.map((c,i)=>({type:"bar",orientation:"h",y:years.map(String),x:mix.map(m=>m[i]*100),name:c,marker:{color:CHANNEL_COLOR[c]},text:mix.map(m=>m[i]>0.06?Math.round(m[i]*100)+"%":""),textposition:"inside",insidetextanchor:"middle",textfont:{color:c==="Marketplace"?C.ink:"#fff"},hovertemplate:"%{x:.1f}%<extra>"+c+"</extra>"})),
+       {barmode:"stack",bargap:0.35,xaxis:{range:[0,100],showgrid:false,showticklabels:false},yaxis:{autorange:"reversed",gridcolor:"#fff"},margin:{l:40}});
+
+  const cats=Object.keys(CAT_COLOR).filter(c=>F.category==="All"||F.category===c);
+  const cNet=cats.map(c=>sum(salesRows().filter(r=>r.category===c),"net")/1e9), cLY=cats.map(c=>sum(salesRows(F,F.year-1).filter(r=>r.category===c),"net")/1e9);
+  plot("c1d",[{type:"bar",x:cats,y:cLY,name:`${F.year-1}`,marker:{color:C.ly},hovertemplate:"%{y:.1f} B<extra>"+(F.year-1)+"</extra>"},
+              {type:"bar",x:cats,y:cNet,name:`${F.year}`,marker:{color:C.blue},text:cNet.map((v,i)=>cLY[i]?sgn(v/cLY[i]-1):""),textposition:"outside",textfont:{color:C.ink2},hovertemplate:"%{y:.1f} B<extra>"+F.year+"</extra>"}],
+       {barmode:"group",bargap:0.35,yaxis:{rangemode:"tozero"}});
+
+  const rowsT = DATA.stores.filter(s=>storeOk(s.store_key)).map(s=>{ const n=sum(DATA.sales.filter(r=>inYear(r.ym,F.year)&&r.store_key===s.store_key),"net"); const t=sum(DATA.targets.filter(r=>inYear(r.ym,F.year)&&r.store_key===s.store_key),"sales_target"); return {name:s.store_name,ach:t?n/t:null,gap:n-t}; }).filter(r=>r.ach!=null).sort((a,b)=>a.ach-b.ach).slice(0,8);
+  table($("t1e"),["Location","Achievement","Gap"],rowsT.map(r=>[r.name,`<span class="pill ${r.ach>=1?"good":"bad"}">${pct(r.ach)}</span>`,fmtM(r.gap)]));
+}
+
+// ------------------------------------------------------------------ page 2
+function renderP2(){
+  const chans=Object.keys(CHANNEL_COLOR).filter(c=>F.channel==="All"||F.channel===c);
+  const perCh = chans.map(c=>{ const f={...F,channel:c}; const rows=salesRows(f); const tx=sum(txRows(f),"transactions"); return {c, net:sum(rows,"net"), ly:netSales(f,F.year-1), tx, basket: tx? sum(rows,"net")/tx:null, upt: tx? sum(rows,"units")/tx:null, disc:discountRate(rows), gm: sum(rows,"net")? 1-sum(rows,"cost")/sum(rows,"net"):null}; });
+  const online = perCh.filter(p=>p.c!=="Physical store"); const onNet=sum(online,"net"), onLY=sum(online,"ly");
+  const best = perCh.filter(p=>p.basket).sort((a,b)=>b.basket-a.basket)[0];
+  const mostDisc = perCh.filter(p=>p.disc!=null).sort((a,b)=>b.disc-a.disc)[0];
+  $("k2").innerHTML = kpi("Online Net Sales", fmtB(onNet)+" VND", onLY? `${sgn(onNet/onLY-1)} vs LY`:"", onNet>=onLY?"good":"bad")
+    + kpi("Online Share", pct(onlineShare()), "of total net sales")
+    + kpi("Highest Avg Basket", best? fmtK(best.basket):"–", best? best.c:"")
+    + kpi("Highest Discount Rate", mostDisc? pct(mostDisc.disc):"–", mostDisc? `${mostDisc.c} · GM ${pct(mostDisc.gm)}`:"")
+    + kpi("Transactions", num(sum(perCh,"tx")), `${F.year}`);
+
+  plot("c2a", chans.map(c=>({x:MONTHS,y:monthly(salesRows({...F,channel:c})).map(v=>v/1e9),name:c,mode:"lines",line:{color:CHANNEL_COLOR[c],width:2},hovertemplate:"%{y:.2f} B<extra>"+c+"</extra>"})), {yaxis:{rangemode:"tozero"}});
+  plot("c2b",[{type:"bar",x:perCh.map(p=>p.c),y:perCh.map(p=>p.basket/1e3),marker:{color:perCh.map(p=>CHANNEL_COLOR[p.c])},text:perCh.map(p=>fmtK(p.basket)),textposition:"outside",textfont:{color:C.ink2},hovertemplate:"%{y:,.0f} K · %{customdata:.2f} units/txn<extra></extra>",customdata:perCh.map(p=>p.upt)}],{yaxis:{rangemode:"tozero"},showlegend:false,bargap:0.4});
+
+  const locs = DATA.stores.filter(s=>storeOk(s.store_key)).map(s=>{ const rows=salesRows({...F,region:"All",channel:"All"}).filter(r=>r.store_key===s.store_key); const n=sum(rows,"net"); return {s,n,disc:discountRate(rows),gm:n?1-sum(rows,"cost")/n:null}; }).filter(l=>l.n>0);
+  const groups=[["Store",C.blue],["Online",C.orange]];
+  plot("c2c", groups.map(([t,col])=>{ const g=locs.filter(l=>l.s.channel_type===t); return {type:"scatter",mode:"markers",name:t==="Store"?"Physical store":"Online channel",x:g.map(l=>l.disc*100),y:g.map(l=>l.gm*100),text:g.map(l=>l.s.store_name),marker:{color:col,size:g.map(l=>8+Math.sqrt(l.n/1e9)*14),opacity:0.85,line:{color:"#fff",width:1.5}},hovertemplate:"%{text}<br>discount %{x:.1f}% · GM %{y:.1f}%<extra></extra>"}; }),
+       {xaxis:{title:{text:"Discount rate (%)",font:{size:11}}},yaxis:{title:{text:"Gross margin (%)",font:{size:11}}}});
+
+  const start=`${F.year}-01-01`, end=`${F.year}-02-29`;
+  const d = DATA.daily.filter(r=>r.date>=start&&r.date<=end&&storeOk(r.store_key,{...F,channel:"All"}));
+  const days=[...new Set(d.map(r=>r.date))].sort();
+  const ser = t => days.map(day=>sum(d.filter(r=>r.date===day&&DATA.storeByKey[r.store_key].channel_type===t),"net")/1e6);
+  const tet=TET[F.year];
+  plot("c2d",[{x:days,y:ser("Store"),name:"Physical stores",mode:"lines",line:{color:C.blue,width:2},hovertemplate:"%{y:,.0f} M<extra>Stores</extra>"},
+              {x:days,y:ser("Online"),name:"Online",mode:"lines",line:{color:C.orange,width:2},hovertemplate:"%{y:,.0f} M<extra>Online</extra>"}],
+       {yaxis:{rangemode:"tozero",title:{text:"Million VND / day",font:{size:11}}}, shapes: tet? [{type:"rect",x0:tet[0],x1:tet[1],y0:0,y1:1,yref:"paper",fillcolor:C.grid,opacity:0.6,line:{width:0},layer:"below"}]:[]});
+}
+
+// ------------------------------------------------------------------ page 3
+function renderP3(){
+  const rows = DATA.stores.filter(s=>storeOk(s.store_key)).map(s=>{
+    const sf={...F,region:"All",channel:"All"}; const sr=salesRows(sf).filter(r=>r.store_key===s.store_key); const net=sum(sr,"net"); const ly=sum(salesRows(sf,F.year-1).filter(r=>r.store_key===s.store_key),"net");
+    const tgt=sum(DATA.targets.filter(r=>inYear(r.ym,F.year)&&r.store_key===s.store_key),"sales_target"); const tx=sum(DATA.transactions.filter(r=>inYear(r.ym,F.year)&&r.store_key===s.store_key),"transactions");
+    const ff=sum(DATA.footfall.filter(r=>inYear(r.ym,F.year)&&r.store_key===s.store_key),"footfall");
+    return {s,net,ly,tgt,tx,ff,ach:tgt?net/tgt:null,yoy:ly?net/ly-1:null,psqm:s.selling_area_sqm?net/s.selling_area_sqm:null,conv:ff?tx/ff:null,basket:tx?net/tx:null};
+  });
+  const stores=rows.filter(r=>r.s.channel_type==="Store");
+  const below=rows.filter(r=>r.ach!=null&&r.ach<1).length;
+  const bestSq=stores.filter(r=>r.psqm).sort((a,b)=>b.psqm-a.psqm)[0], worstSq=stores.filter(r=>r.psqm).sort((a,b)=>a.psqm-b.psqm)[0];
+  $("k3").innerHTML = kpi("Locations below target", `${below} / ${rows.filter(r=>r.ach!=null).length}`, `${F.year}`, below? "bad":"good")
+    + kpi("Conversion Rate", pct(conversion()), "store transactions ÷ footfall")
+    + kpi("Best sales per sqm", bestSq? fmtM(bestSq.psqm):"–", bestSq? bestSq.s.store_name:"")
+    + kpi("Lowest sales per sqm", worstSq? fmtM(worstSq.psqm):"–", worstSq? `${worstSq.s.store_name} · ${worstSq.s.store_format}`:"")
+    + kpi("Avg basket (stores)", fmtK(sum(stores,"net")/Math.max(1,sum(stores,"tx"))), "per transaction");
+
+  table($("t3a"),["Location","Format","Net sales","YoY","Target","Sales / sqm","Conversion","Avg basket"],
+    rows.sort((a,b)=>(a.ach??9)-(b.ach??9)).map(r=>[r.s.store_name,r.s.store_format,fmtB(r.net),sgn(r.yoy),r.ach==null?"–":`<span class="pill ${r.ach>=1?"good":"bad"}">${pct(r.ach)}</span>`,r.psqm?fmtM(r.psqm):"–",r.conv?pct(r.conv):"–",fmtK(r.basket)]));
+  $("n3a").textContent = F.category==="All" ? "Sorted by target achievement · physical stores and online channels" : "Sorted by target achievement · net sales filtered to category; targets, footfall and transactions are all-category";
+
+  const sq=stores.filter(r=>r.psqm).sort((a,b)=>a.psqm-b.psqm);
+  plot("c3b",[{type:"bar",orientation:"h",y:sq.map(r=>r.s.store_name),x:sq.map(r=>r.psqm/1e6),marker:{color:C.blue},text:sq.map(r=>r.s.store_format),textposition:"outside",textfont:{color:C.muted,size:10},hovertemplate:"%{x:.1f} M / sqm<extra></extra>"}],{margin:{l:150,r:70},yaxis:{gridcolor:"#fff"},showlegend:false,bargap:0.35});
+  const sc=stores.filter(r=>r.conv);
+  plot("c3c",[{type:"scatter",mode:"markers+text",x:sc.map(r=>r.ff/1e3),y:sc.map(r=>r.conv*100),text:sc.map(r=>r.s.store_name.split(" - ")[0]),textposition:"top center",textfont:{size:10,color:C.ink2},marker:{color:C.blue,size:sc.map(r=>8+Math.sqrt(r.net/1e9)*12),opacity:0.85,line:{color:"#fff",width:1.5}},hovertemplate:"%{text}<br>footfall %{x:,.0f} K · conversion %{y:.1f}%<extra></extra>"}],
+       {xaxis:{title:{text:"Footfall (thousand)",font:{size:11}}},yaxis:{title:{text:"Conversion rate (%)",font:{size:11}}},showlegend:false});
+
+  const locs=rows.map(r=>r.s); const months=DATA.meta.months.filter(m=>inYear(m,F.year));
+  const z = locs.map(s=>months.map(m=>{ const n=sum(DATA.sales.filter(r=>r.ym===m&&r.store_key===s.store_key),"net"); const t=sum(DATA.targets.filter(r=>r.ym===m&&r.store_key===s.store_key),"sales_target"); return t? (n/t-1)*100:null; }));
+  plot("c3d",[{type:"heatmap",z,x:months.map(m=>MONTHS[+m.slice(5)-1]),y:locs.map(s=>s.store_name),zmid:0,zmin:-15,zmax:15,colorscale:[[0,"#d03b3b"],[0.5,"#f0efec"],[1,"#2a78d6"]],colorbar:{title:{text:"vs target",font:{size:11}},ticksuffix:"%",thickness:10,len:0.8},hovertemplate:"%{y} · %{x}<br>%{z:+.1f}% vs target<extra></extra>",xgap:2,ygap:2}],
+       {margin:{l:150,r:10,t:8,b:36},yaxis:{autorange:"reversed",gridcolor:"#fff"},xaxis:{showgrid:false}});
+}
+
+// ------------------------------------------------------------------ page 4
+function renderP4(){
+  const st=sellThrough(), woc=weeksOfCover(), ym=lastSnapshot();
+  const inv=ym? inventoryAt(F,ym):[];
+  const stockVal=sum(inv,"value");
+  const seasonStat = s => { const f={...F}; const u=sum(salesRows({...f,channel:f.channel==="All"?"Physical store":f.channel}).filter(r=>r.season===s&&DATA.storeByKey[r.store_key].channel_type==="Store"),"units"); const soh=sum(inv.filter(r=>r.season===s),"soh"); return {u,soh,st:(u+soh)?u/(u+soh):null,woc:u?soh/(u/52.14):null}; };
+  const ss=seasonStat("SS"), fwS=seasonStat("FW");
+  $("k4").innerHTML = kpi("Sell-Through", pct(st), `${F.year} · physical stores`, st>=0.85?"good":"")
+    + kpi("Weeks of Cover", woc==null?"–":woc.toFixed(1), `closing stock at ${ym||"–"}`, woc>8?"bad":woc<4?"bad":"good")
+    + kpi("Stock Value at Cost", fmtB(stockVal)+" VND", `month-end ${ym||"–"}`)
+    + kpi("Weeks of Cover · FW", fwS.woc==null?"–":fwS.woc.toFixed(1), `SS: ${ss.woc==null?"–":ss.woc.toFixed(1)}`, fwS.woc>8?"bad":"")
+    + kpi("Units Sold (stores)", num(storeUnits()), `${F.year}`);
+
+  const subs=[...new Set(salesRows().map(r=>r.subcategory))];
+  const stRows = subs.map(sub=>{ const out={sub}; for(const s of ["SS","FW"]){ const u=sum(salesRows({...F,channel:F.channel==="All"?"Physical store":F.channel}).filter(r=>r.subcategory===sub&&r.season===s&&DATA.storeByKey[r.store_key].channel_type==="Store"),"units"); const soh=sum(inv.filter(r=>r.subcategory===sub&&r.season===s),"soh"); out[s]=(u+soh)? u/(u+soh):null; } return out; }).sort((a,b)=>((a.SS??a.FW)-(b.SS??b.FW)));
+  plot("c4a", ["SS","FW"].map(s=>({type:"bar",orientation:"h",y:stRows.map(r=>r.sub),x:stRows.map(r=>r[s]==null?null:r[s]*100),name:s==="SS"?"Spring/Summer":"Fall/Winter",marker:{color:SEASON_COLOR[s]},hovertemplate:"%{y} · %{x:.0f}%<extra>"+s+"</extra>"})),
+       {barmode:"group",bargap:0.25,margin:{l:90},xaxis:{range:[0,100],ticksuffix:"%"},yaxis:{gridcolor:"#fff"}});
+
+  const months=DATA.meta.months.filter(m=>inYear(m,F.year));
+  const wocSeries = s => months.map(m=>{ const u=sum(DATA.sales.filter(r=>r.ym===m&&r.season===s&&storeOk(r.store_key,{...F,channel:F.channel==="All"?"Physical store":F.channel})&&DATA.storeByKey[r.store_key].channel_type==="Store"&&(F.category==="All"||r.category===F.category)),"units"); const soh=sum(DATA.inventory.filter(r=>r.ym===m&&r.season===s&&storeOk(r.store_key,{...F,channel:"All"})&&(F.category==="All"||r.category===F.category)),"soh"); return u? soh/(u/4.345):null; });
+  plot("c4b", ["SS","FW"].map(s=>({x:months.map(m=>MONTHS[+m.slice(5)-1]),y:wocSeries(s),name:s==="SS"?"Spring/Summer":"Fall/Winter",mode:"lines+markers",line:{color:SEASON_COLOR[s],width:2},marker:{size:5},hovertemplate:"%{y:.1f} weeks<extra>"+s+"</extra>"})),
+       {yaxis:{rangemode:"tozero",title:{text:"Weeks of cover",font:{size:11}}},shapes:[{type:"line",x0:0,x1:1,xref:"paper",y0:6,y1:6,line:{color:C.muted,width:1,dash:"dash"}}]});
+
+  const skus=DATA.skus.filter(r=>r.year===F.year&&(F.category==="All"||r.category===F.category)).map(r=>({...r, gm: r.net? (r.net-r.cost)/r.net:null, st:(r.units+r.soh_year_end)? r.units/(r.units+r.soh_year_end):null}));
+  table($("t4c"),["SKU","Subcategory","Units","Net sales","GM %"], skus.sort((a,b)=>b.net-a.net).slice(0,10).map(r=>[r.sku,`${r.category} · ${r.subcategory}`,num(r.units),fmtM(r.net),pct(r.gm)]));
+  table($("t4d"),["SKU","Subcategory","Units","Year-end stock","Sell-through"], skus.filter(r=>r.st!=null&&r.units>50).sort((a,b)=>a.st-b.st).slice(0,10).map(r=>[r.sku,`${r.category} · ${r.subcategory} · ${r.season}`,num(r.units),num(r.soh_year_end),`<span class="pill ${r.st<0.85?"bad":"good"}">${pct(r.st,0)}</span>`]));
+
+  const cats=Object.keys(CAT_COLOR).filter(c=>F.category==="All"||F.category===c);
+  const subNet = by(salesRows(), r=>r.category+"|"+r.subcategory);
+  const labels=[], parents=[], values=[], colors=[];
+  cats.forEach(c=>{ labels.push(c); parents.push(""); values.push(0); colors.push(CAT_COLOR[c]); });
+  subNet.forEach((rows,k)=>{ const [c,sub]=k.split("|"); if(!cats.includes(c)) return; labels.push(sub+" ("+c+")"); parents.push(c); values.push(sum(rows,"net")/1e9); colors.push(CAT_COLOR[c]); });
+  plot("c4e",[{type:"treemap",labels,parents,values,branchvalues:"remainder",marker:{colors,line:{width:2,color:"#fff"}},textinfo:"label+value",texttemplate:"%{label}<br>%{value:.2f} B",hovertemplate:"%{label}<br>%{value:.2f} B<extra></extra>",pathbar:{visible:false}}],{margin:{l:0,r:0,t:0,b:0}});
+}
+
+// ------------------------------------------------------------------ page 5
+function renderP5(){
+  const tx=txRows(); const net=netSales({...F,category:"All"});
+  const identNet=sum(tx,"identified_net"), loyNet=sum(tx,"loyalty_net");
+  const storeLevel = F.region!=="All" || F.channel!=="All";
+  const cust = storeLevel ? DATA.customers.filter(r=>r.year===F.year&&storeOk(r.store_key)) : DATA.customers_total.filter(r=>r.year===F.year);
+  const customers=sum(cust,"customers"), repeat=sum(cust,"repeat_customers");
+  $("k5").innerHTML = kpi("Identified Customers", num(customers), storeLevel ? `${F.year} · summed per location (a customer shopping in two locations counts twice)` : `${F.year} · distinct loyalty members with a purchase`)
+    + kpi("Identified Sales Share", pct(net? identNet/net:null), "online = 100% by design")
+    + kpi("Loyalty Share", pct(net? loyNet/net:null), "Silver + Gold tiers")
+    + kpi("Repeat Rate", pct(customers? repeat/customers:null), "2+ transactions in the year")
+    + kpi("Avg Spend per Identified Customer", fmtK(customers? identNet/customers:null), "net sales ÷ identified customers");
+  const chans=Object.keys(CHANNEL_COLOR).filter(c=>F.channel==="All"||F.channel===c);
+  const share=chans.map(c=>{ const t=txRows({...F,channel:c}); const n=netSales({...F,channel:c,category:"All"}); return n? sum(t,"identified_net")/n:null; });
+  plot("c5a",[{type:"bar",x:chans,y:share.map(v=>v==null?null:v*100),marker:{color:chans.map(c=>CHANNEL_COLOR[c])},text:share.map(v=>pct(v,0)),textposition:"outside",textfont:{color:C.ink2},hovertemplate:"%{y:.1f}%<extra></extra>"}],{yaxis:{range:[0,115],ticksuffix:"%"},showlegend:false,bargap:0.4});
+  const tiers=["Member","Silver","Gold"];
+  const rr=tiers.map(t=>{ const g=cust.filter(r=>r.loyalty_tier===t); const c=sum(g,"customers"); return c? sum(g,"repeat_customers")/c:null; });
+  const tierNet=tiers.map(t=>sum(cust.filter(r=>r.loyalty_tier===t),"net")/1e9);
+  plot("c5b",[{type:"bar",x:tiers,y:rr.map(v=>v==null?null:v*100),marker:{color:[ "#9ec5f4","#5598e7","#1c5cab"]},text:rr.map((v,i)=>`${pct(v,0)} · ${tierNet[i].toFixed(1)} B`),textposition:"outside",textfont:{color:C.ink2},hovertemplate:"repeat %{y:.1f}%<extra>%{x}</extra>"}],{yaxis:{range:[0,100],ticksuffix:"%"},showlegend:false,bargap:0.4});
+  const age=DATA.age_mix.filter(r=>r.year===F.year); const bands=[...new Set(age.map(r=>r.age_band))].sort();
+  plot("c5c",[["F",C.magenta,"Female"],["M",C.blue,"Male"]].map(([g,col,name])=>({type:"bar",x:bands,y:bands.map(b=>sum(age.filter(r=>r.age_band===b&&r.gender===g),"net")/1e9),name,marker:{color:col},hovertemplate:"%{y:.2f} B<extra>"+name+"</extra>"})),{barmode:"group",bargap:0.3,yaxis:{rangemode:"tozero"}});
+  const mem=DATA.members.filter(r=>inYear(r.ym,F.year));
+  plot("c5d",[{type:"bar",x:mem.map(r=>MONTHS[+r.ym.slice(5)-1]),y:mem.map(r=>r.new_members),marker:{color:C.blue},hovertemplate:"%{y:,} new members<extra></extra>"}],{yaxis:{rangemode:"tozero"},showlegend:false,bargap:0.35});
+}
+
+// ------------------------------------------------------------------ wiring
+const RENDER = {p1:renderP1,p2:renderP2,p3:renderP3,p4:renderP4,p5:renderP5};
+let active="p1";
+function renderActive(){ RENDER[active](); updateSubtitle(); }
+function updateSubtitle(){
+  const parts=[`${F.year}`, F.region==="All"?"All regions":F.region, F.channel==="All"?"All channels":F.channel, F.category==="All"?"All categories":F.category];
+  $("subtitle").innerHTML = `${parts.join(" · ")} · data to ${DATA.meta.snapshot_date} · <a href="https://github.com/Hakian14/omnichannel-retail-powerbi">model, DAX measures and spec on GitHub</a>`;
+}
+function init(){
+  DATA.meta.years.forEach(y=>{ const o=document.createElement("option"); o.value=y; o.textContent=y; if(y===F.year) o.selected=true; $("fYear").appendChild(o); });
+  ["fYear","fRegion","fChannel","fCategory"].forEach(id=>$(id).addEventListener("change",()=>{ F.year=+$("fYear").value; F.region=$("fRegion").value; F.channel=$("fChannel").value; F.category=$("fCategory").value; renderActive(); }));
+  $("reset").addEventListener("click",()=>{ $("fYear").value=DATA.meta.years.slice(-1)[0]; $("fRegion").value="All"; $("fChannel").value="All"; $("fCategory").value="All"; $("fYear").dispatchEvent(new Event("change")); });
+  document.querySelectorAll("#tabs button").forEach(b=>b.addEventListener("click",()=>{ document.querySelectorAll("#tabs button").forEach(x=>x.classList.remove("active")); b.classList.add("active"); document.querySelectorAll(".page").forEach(p=>p.classList.remove("active")); active=b.dataset.page; $(active).classList.add("active"); renderActive(); }));
+  $("loading").style.display="none"; $("main").style.display="block";
+  $("footer").textContent = `Synthetic data (${DATA.meta.total_rows.toLocaleString()} sales lines, 2024–2025) generated for this portfolio. Measures mirror model/measures.dax; definitions in model/data_model.md. No real company data.`;
+  renderActive();
+  window.addEventListener("resize",()=>{ document.querySelectorAll(`#${active} .plot`).forEach(el=>{ if(el.data) Plotly.Plots.resize(el); }); });
+}
+load().catch(e=>{ $("loading").innerHTML = `Could not load data (${e.message}). If you opened this file directly, serve the folder instead: <code>python -m http.server</code> in <code>docs/</code>, then open <code>http://localhost:8000</code>.`; });
+</script>
+</body>
+</html>
