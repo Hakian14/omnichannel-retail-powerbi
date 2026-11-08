@@ -1,0 +1,16 @@
+store_key,store_code,store_name,channel_type,channel,city,region,store_format,selling_area_sqm,open_date
+1,S01,Hanoi - Cau Giay,Store,Physical store,Ha Noi,North,Flagship,420,2019-03-15
+2,S02,Hanoi - Long Bien,Store,Physical store,Ha Noi,North,Standard,260,2020-10-01
+3,S03,Hai Phong - Le Chan,Store,Physical store,Hai Phong,North,Standard,240,2021-06-12
+4,S04,Hai Duong - City,Store,Physical store,Hai Duong,North,Standard,210,2022-01-20
+5,S05,Bac Ninh - City,Store,Physical store,Bac Ninh,North,Outlet,180,2022-09-09
+6,S06,Da Nang - Hai Chau,Store,Physical store,Da Nang,Central,Flagship,380,2020-05-05
+7,S07,Hue - City,Store,Physical store,Hue,Central,Standard,200,2023-03-03
+8,S08,Vinh - City,Store,Physical store,Vinh,Central,Standard,190,2024-08-16
+9,S09,HCMC - District 1,Store,Physical store,Ho Chi Minh City,South,Flagship,450,2019-11-11
+10,S10,HCMC - Thu Duc,Store,Physical store,Ho Chi Minh City,South,Standard,270,2021-02-02
+11,S11,Can Tho - Ninh Kieu,Store,Physical store,Can Tho,South,Standard,230,2022-04-18
+12,S12,Bien Hoa - City,Store,Physical store,Bien Hoa,South,Outlet,170,2025-03-01
+13,W01,Website,Online,Website,Online,Online,Online,0,2019-01-01
+14,A01,Mobile app,Online,Mobile app,Online,Online,Online,0,2021-07-01
+15,M01,Marketplace,Online,Marketplace,Online,Online,Online,0,2020-03-01

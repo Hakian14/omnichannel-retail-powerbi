@@ -1,0 +1,267 @@
+// =============================================================================
+// Omnichannel Retail - DAX measure library
+// -----------------------------------------------------------------------------
+// Conventions
+//   * All measures live in a dedicated, hidden "_Measures" table.
+//   * Display folders group measures by business area (shown as // Folder:).
+//   * Base measures are defined once; everything else references them, so a
+//     change in the definition of "sales" propagates everywhere.
+//   * Time intelligence uses the dim_date table (marked as Date table);
+//     Auto date/time is OFF in the model.
+//   * DIVIDE() everywhere - never "/" - to avoid divide-by-zero errors.
+// =============================================================================
+
+
+// ---------------------------------------------------------------- Folder: 1. Sales
+
+Net Sales =
+SUM ( fact_sales[net_sales] )
+
+Gross Sales =
+SUMX ( fact_sales, fact_sales[unit_price] * fact_sales[quantity] )
+
+Discounts =
+SUM ( fact_sales[discount_amount] )
+
+Discount Rate % =
+DIVIDE ( [Discounts], [Gross Sales] )
+
+Units Sold =
+SUM ( fact_sales[quantity] )
+
+Transactions =
+DISTINCTCOUNT ( fact_sales[transaction_id] )
+
+Avg Basket Value =
+DIVIDE ( [Net Sales], [Transactions] )
+
+Units per Transaction =
+DIVIDE ( [Units Sold], [Transactions] )
+
+Avg Selling Price =
+DIVIDE ( [Net Sales], [Units Sold] )
+
+
+// ------------------------------------------------------------- Folder: 2. Margin
+
+Cost of Sales =
+SUM ( fact_sales[cost_amount] )
+
+Gross Margin =
+[Net Sales] - [Cost of Sales]
+
+Gross Margin % =
+DIVIDE ( [Gross Margin], [Net Sales] )
+
+
+// --------------------------------------------------- Folder: 3. Time intelligence
+
+Net Sales LY =
+CALCULATE ( [Net Sales], SAMEPERIODLASTYEAR ( dim_date[date] ) )
+
+Net Sales YoY =
+[Net Sales] - [Net Sales LY]
+
+Net Sales YoY % =
+DIVIDE ( [Net Sales YoY], [Net Sales LY] )
+
+Net Sales MTD =
+TOTALMTD ( [Net Sales], dim_date[date] )
+
+Net Sales YTD =
+TOTALYTD ( [Net Sales], dim_date[date] )
+
+Net Sales YTD LY =
+CALCULATE ( [Net Sales YTD], SAMEPERIODLASTYEAR ( dim_date[date] ) )
+
+Net Sales YTD YoY % =
+DIVIDE ( [Net Sales YTD] - [Net Sales YTD LY], [Net Sales YTD LY] )
+
+Net Sales Rolling 12M =
+CALCULATE (
+    [Net Sales],
+    DATESINPERIOD ( dim_date[date], MAX ( dim_date[date] ), -12, MONTH )
+)
+
+// Same-store sales growth: only stores that were open for the full
+// comparison period, so new openings don't flatter the growth number.
+Comparable Stores Net Sales =
+CALCULATE (
+    [Net Sales],
+    FILTER (
+        dim_store,
+        dim_store[channel_type] = "Store"
+            && dim_store[open_date] <= EDATE ( MIN ( dim_date[date] ), -12 )
+    )
+)
+
+Comparable Stores Net Sales LY =
+CALCULATE ( [Comparable Stores Net Sales], SAMEPERIODLASTYEAR ( dim_date[date] ) )
+
+Same-Store Sales Growth % =
+DIVIDE (
+    [Comparable Stores Net Sales] - [Comparable Stores Net Sales LY],
+    [Comparable Stores Net Sales LY]
+)
+
+
+// -------------------------------------------------------------- Folder: 4. Targets
+
+Sales Target =
+SUM ( fact_targets[sales_target] )
+
+Target Achievement % =
+DIVIDE ( [Net Sales], [Sales Target] )
+
+Variance to Target =
+[Net Sales] - [Sales Target]
+
+// Used for conditional formatting of KPI cards: 1 = on/above target, 0 = below
+Target Status =
+IF ( ISBLANK ( [Sales Target] ), BLANK (), IF ( [Net Sales] >= [Sales Target], 1, 0 ) )
+
+
+// ------------------------------------------------------------- Folder: 5. Channel
+
+Online Net Sales =
+CALCULATE ( [Net Sales], dim_store[channel_type] = "Online" )
+
+Store Net Sales =
+CALCULATE ( [Net Sales], dim_store[channel_type] = "Store" )
+
+Online Share % =
+DIVIDE ( [Online Net Sales], [Net Sales] )
+
+// Share of the current channel within all channels, regardless of filters on channel
+Channel Share of Total % =
+DIVIDE ( [Net Sales], CALCULATE ( [Net Sales], REMOVEFILTERS ( dim_store ) ) )
+
+
+// ------------------------------------------------- Folder: 6. Store productivity
+
+Footfall =
+SUM ( fact_footfall[footfall] )
+
+Store Transactions =
+CALCULATE ( [Transactions], dim_store[channel_type] = "Store" )
+
+Conversion Rate % =
+DIVIDE ( [Store Transactions], [Footfall] )
+
+Selling Area sqm =
+SUM ( dim_store[selling_area_sqm] )
+
+Sales per sqm =
+DIVIDE ( [Store Net Sales], [Selling Area sqm] )
+
+// Days in the current filter context on which the store had at least one sale
+Trading Days =
+CALCULATE ( DISTINCTCOUNT ( fact_sales[date_key] ), dim_store[channel_type] = "Store" )
+
+Sales per Trading Day =
+DIVIDE ( [Store Net Sales], [Trading Days] )
+
+
+// ---------------------------------------------------------- Folder: 7. Inventory
+
+// Inventory is a month-end snapshot: never SUM it across dates.
+// Take the value at the last snapshot date visible in the filter context.
+Stock on Hand =
+VAR MaxDate = MAX ( dim_date[date] )
+VAR LastSnapshot =
+    CALCULATE (
+        MAX ( fact_inventory[date_key] ),
+        REMOVEFILTERS ( dim_date ),
+        dim_date[date] <= MaxDate
+    )
+RETURN
+    CALCULATE (
+        SUM ( fact_inventory[stock_on_hand] ),
+        REMOVEFILTERS ( dim_date ),
+        fact_inventory[date_key] = LastSnapshot
+    )
+
+Stock Value at Cost =
+VAR MaxDate = MAX ( dim_date[date] )
+VAR LastSnapshot =
+    CALCULATE (
+        MAX ( fact_inventory[date_key] ),
+        REMOVEFILTERS ( dim_date ),
+        dim_date[date] <= MaxDate
+    )
+RETURN
+    CALCULATE (
+        SUM ( fact_inventory[stock_value_at_cost] ),
+        REMOVEFILTERS ( dim_date ),
+        fact_inventory[date_key] = LastSnapshot
+    )
+
+Store Units Sold =
+CALCULATE ( [Units Sold], dim_store[channel_type] = "Store" )
+
+// Units sold in the period as a share of what was available (sold + closing stock)
+Sell-Through % =
+DIVIDE ( [Store Units Sold], [Store Units Sold] + [Stock on Hand] )
+
+// How many weeks the closing stock would last at the period's average weekly rate of sale
+Avg Weekly Units =
+DIVIDE ( [Store Units Sold], DIVIDE ( COUNTROWS ( dim_date ), 7 ) )
+
+Weeks of Cover =
+DIVIDE ( [Stock on Hand], [Avg Weekly Units] )
+
+
+// ----------------------------------------------------------- Folder: 8. Customers
+
+// Identified customers only (walk-in = customer_key 0 is excluded)
+Identified Customers =
+CALCULATE ( DISTINCTCOUNT ( fact_sales[customer_key] ), fact_sales[customer_key] <> 0 )
+
+Identified Sales Share % =
+DIVIDE ( CALCULATE ( [Net Sales], fact_sales[customer_key] <> 0 ), [Net Sales] )
+
+Loyalty Net Sales =
+CALCULATE ( [Net Sales], dim_customer[loyalty_tier] IN { "Silver", "Gold" } )
+
+Loyalty Share % =
+DIVIDE ( [Loyalty Net Sales], [Net Sales] )
+
+Avg Spend per Identified Customer =
+DIVIDE ( CALCULATE ( [Net Sales], fact_sales[customer_key] <> 0 ), [Identified Customers] )
+
+// Customers with 2+ transactions in the period, as a share of identified customers
+Repeat Customers =
+CALCULATE (
+    COUNTROWS (
+        FILTER (
+            SUMMARIZE ( fact_sales, fact_sales[customer_key], "txns", DISTINCTCOUNT ( fact_sales[transaction_id] ) ),
+            [txns] >= 2 && fact_sales[customer_key] <> 0
+        )
+    )
+)
+
+Repeat Rate % =
+DIVIDE ( [Repeat Customers], [Identified Customers] )
+
+
+// -------------------------------------------------------------- Folder: 9. Labels
+
+// Dynamic title helpers for the report header
+Selected Period Label =
+VAR MinD = MIN ( dim_date[date] )
+VAR MaxD = MAX ( dim_date[date] )
+RETURN
+    FORMAT ( MinD, "dd mmm yyyy" ) & " - " & FORMAT ( MaxD, "dd mmm yyyy" )
+
+Last Refresh Label =
+"Data to " & FORMAT ( CALCULATE ( MAX ( dim_date[date] ), ALL ( dim_date ), fact_sales ), "dd mmm yyyy" )
+
+Net Sales Short =
+VAR V = [Net Sales]
+RETURN
+    SWITCH (
+        TRUE (),
+        V >= 1e9, FORMAT ( V / 1e9, "#,0.0" ) & " B",
+        V >= 1e6, FORMAT ( V / 1e6, "#,0" ) & " M",
+        FORMAT ( V, "#,0" )
+    )
