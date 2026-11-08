@@ -130,10 +130,10 @@ one-to-many. In Power BI terms: `dim_month (1) → (*) dim_date` and `dim_month 
 | Measures in a dedicated `_Measures` table with display folders | Discoverability for report authors; no measures scattered across facts. |
 | No calculated columns on facts | Everything that can be computed at load time is done in Power Query (or upstream SQL); calculated columns on facts are not compressed as well and recalculate on every refresh. |
 
-## Performance notes from the real project
+## Performance notes for a model of this shape
 
-The migration I led (Tableau → Power BI, retail dataset of similar shape but ~40× the rows) went
-from 9–12 s to under 2 s per visual by:
+On a retail model like this one but with tens of millions of fact rows, these are the changes that
+move visual load time most, in the order I would make them:
 
 1. **Collapsing a snowflake into a star** — product hierarchy was 4 tables; flattened into `dim_product`.
 2. **Removing bi-directional relationships** that had been added "to make the slicers work"; replaced with `CROSSFILTER` in two measures and a bridge table.

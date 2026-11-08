@@ -118,12 +118,12 @@ cd docs && python -m http.server 8000     # then open http://localhost:8000
 
 ## Performance notes
 
-The real migration this is based on (Tableau → Power BI, ~40× this data volume) went from 9–12 s
-to under 2 s per visual. What moved the needle, in order: flattening a snowflaked product
-hierarchy into one dimension, removing bi-directional relationships, replacing
-`FILTER(ALL(fact))` patterns with dimension filters, pre-aggregating a sensor feed upstream,
-turning Auto date/time off, and adding an aggregation table for the executive page.
-Full write-up: [`model/data_model.md#performance-notes-from-the-real-project`](model/data_model.md#performance-notes-from-the-real-project).
+For a model of this shape at production volume, the changes that move visual load time most, in
+order: flattening a snowflaked product hierarchy into one dimension, removing bi-directional
+relationships, replacing `FILTER(ALL(fact))` patterns with dimension filters, pre-aggregating
+high-volume feeds upstream, turning Auto date/time off, and adding an aggregation table for the
+executive page.
+Full write-up: [`model/data_model.md#performance-notes-for-a-model-of-this-shape`](model/data_model.md#performance-notes-for-a-model-of-this-shape).
 
 ## Rebuild the model in Power BI Desktop
 
