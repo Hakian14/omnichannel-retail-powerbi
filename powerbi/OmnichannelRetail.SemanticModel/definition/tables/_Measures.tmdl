@@ -1,0 +1,350 @@
+table _Measures
+	lineageTag: 7f85c1b1-6b27-432e-8208-ca044c7ad707
+
+	measure 'Net Sales' = SUM ( fact_sales[net_sales] )
+		formatString: #,0
+		lineageTag: 58f77789-c0fd-40d9-8b8d-0ac3f12bf706
+		displayFolder: 1. Sales
+
+	measure 'Gross Sales' = SUMX ( fact_sales, fact_sales[unit_price] * fact_sales[quantity] )
+		formatString: #,0
+		lineageTag: 742fd878-677b-46bc-b252-087c6329ef71
+		displayFolder: 1. Sales
+
+	measure Discounts = SUM ( fact_sales[discount_amount] )
+		formatString: #,0
+		lineageTag: 06590e74-04a7-4aaa-b917-19a658068306
+		displayFolder: 1. Sales
+
+	measure 'Discount Rate %' = DIVIDE ( [Discounts], [Gross Sales] )
+		formatString: 0.0%
+		lineageTag: d56b95e4-ae6f-4f4e-97cd-74ffb8cf5cf5
+		displayFolder: 1. Sales
+
+	measure 'Units Sold' = SUM ( fact_sales[quantity] )
+		formatString: #,0
+		lineageTag: 657b9fed-5da7-44d4-8691-edd533be4185
+		displayFolder: 1. Sales
+
+	measure Transactions = DISTINCTCOUNT ( fact_sales[transaction_id] )
+		formatString: #,0
+		lineageTag: 1ca9268d-7d9a-4b39-820b-863a5fd91955
+		displayFolder: 1. Sales
+
+	measure 'Avg Basket Value' = DIVIDE ( [Net Sales], [Transactions] )
+		formatString: #,0.0
+		lineageTag: b99ad7a8-d21b-4efe-ad2a-e8189719197d
+		displayFolder: 1. Sales
+
+	measure 'Units per Transaction' = DIVIDE ( [Units Sold], [Transactions] )
+		formatString: #,0.0
+		lineageTag: 20dc7cc7-5e1f-4856-a36f-7aee6072dfb5
+		displayFolder: 1. Sales
+
+	measure 'Avg Selling Price' = DIVIDE ( [Net Sales], [Units Sold] )
+		formatString: #,0
+		lineageTag: 18d26128-a5ab-44fd-9402-6292e3acdb01
+		displayFolder: 1. Sales
+
+	measure 'Cost of Sales' = SUM ( fact_sales[cost_amount] )
+		formatString: #,0
+		lineageTag: 5e7128ed-4472-4a8f-862b-361de09000a4
+		displayFolder: 2. Margin
+
+	measure 'Gross Margin' = [Net Sales] - [Cost of Sales]
+		formatString: #,0
+		lineageTag: d742b27c-a8ce-4c5e-a5d9-b3309dc02241
+		displayFolder: 2. Margin
+
+	measure 'Gross Margin %' = DIVIDE ( [Gross Margin], [Net Sales] )
+		formatString: 0.0%
+		lineageTag: 9ac4b6af-c8e1-4459-9ddb-364bb0f6da3b
+		displayFolder: 2. Margin
+
+	measure 'Net Sales LY' = CALCULATE ( [Net Sales], SAMEPERIODLASTYEAR ( dim_date[date] ) )
+		formatString: #,0
+		lineageTag: a8de5070-2693-4d5d-b460-e23c47dfcaf2
+		displayFolder: 3. Time intelligence
+
+	measure 'Net Sales YoY' = [Net Sales] - [Net Sales LY]
+		formatString: #,0
+		lineageTag: 9d45215b-88fb-42b0-9cef-a8a2e1c6be84
+		displayFolder: 3. Time intelligence
+
+	measure 'Net Sales YoY %' = DIVIDE ( [Net Sales YoY], [Net Sales LY] )
+		formatString: 0.0%
+		lineageTag: 82d3c3b6-a8d4-492e-94cc-d76cd1548adc
+		displayFolder: 3. Time intelligence
+
+	measure 'Net Sales MTD' = TOTALMTD ( [Net Sales], dim_date[date] )
+		formatString: #,0
+		lineageTag: 2912de51-ac5c-4be3-a16d-0da2fd7f1367
+		displayFolder: 3. Time intelligence
+
+	measure 'Net Sales YTD' = TOTALYTD ( [Net Sales], dim_date[date] )
+		formatString: #,0
+		lineageTag: 8a6f3722-7b2a-4e2e-b866-b1fdbc9f87c5
+		displayFolder: 3. Time intelligence
+
+	measure 'Net Sales YTD LY' = CALCULATE ( [Net Sales YTD], SAMEPERIODLASTYEAR ( dim_date[date] ) )
+		formatString: #,0
+		lineageTag: 44e2563a-75b4-4d2c-a8e2-83bac8f91057
+		displayFolder: 3. Time intelligence
+
+	measure 'Net Sales YTD YoY %' = DIVIDE ( [Net Sales YTD] - [Net Sales YTD LY], [Net Sales YTD LY] )
+		formatString: 0.0%
+		lineageTag: dfe01c75-d141-44dc-bdc0-796caba8f392
+		displayFolder: 3. Time intelligence
+
+	measure 'Net Sales Rolling 12M' =
+			CALCULATE (
+			    [Net Sales],
+			    DATESINPERIOD ( dim_date[date], MAX ( dim_date[date] ), -12, MONTH )
+			)
+		formatString: #,0
+		lineageTag: e66cd800-a00f-41bc-929a-355006450727
+		displayFolder: 3. Time intelligence
+
+	measure 'Comparable Stores Net Sales' =
+			CALCULATE (
+			    [Net Sales],
+			    FILTER (
+			        dim_store,
+			        dim_store[channel_type] = "Store"
+			            && dim_store[open_date] <= EDATE ( MIN ( dim_date[date] ), -12 )
+			    )
+			)
+		formatString: #,0
+		lineageTag: 8ed34a36-b291-4877-a9d5-cfc2ce3ea3c2
+		displayFolder: 3. Time intelligence
+
+	measure 'Comparable Stores Net Sales LY' = CALCULATE ( [Comparable Stores Net Sales], SAMEPERIODLASTYEAR ( dim_date[date] ) )
+		formatString: #,0
+		lineageTag: f5a1c0ce-77bb-4d29-bb11-5f98b25f2031
+		displayFolder: 3. Time intelligence
+
+	measure 'Same-Store Sales Growth %' =
+			DIVIDE (
+			    [Comparable Stores Net Sales] - [Comparable Stores Net Sales LY],
+			    [Comparable Stores Net Sales LY]
+			)
+		formatString: 0.0%
+		lineageTag: 34bb6b15-3ab6-4ddd-9635-1c6ecbc6897e
+		displayFolder: 3. Time intelligence
+
+	measure 'Sales Target' = SUM ( fact_targets[sales_target] )
+		formatString: #,0
+		lineageTag: d0cedd49-dae2-4aff-b2fb-d83fe8531e4a
+		displayFolder: 4. Targets
+
+	measure 'Target Achievement %' = DIVIDE ( [Net Sales], [Sales Target] )
+		formatString: 0.0%
+		lineageTag: 07cc4ed0-9854-43c8-8417-f3c53639100e
+		displayFolder: 4. Targets
+
+	measure 'Variance to Target' = [Net Sales] - [Sales Target]
+		formatString: #,0
+		lineageTag: b808b4ee-0c7a-4442-97e6-dc384be94538
+		displayFolder: 4. Targets
+
+	measure 'Target Status' = IF ( ISBLANK ( [Sales Target] ), BLANK (), IF ( [Net Sales] >= [Sales Target], 1, 0 ) )
+		formatString: 0
+		lineageTag: 7d39e65c-4bf4-43be-b5ab-6fa2ad3e6994
+		displayFolder: 4. Targets
+
+	measure 'Online Net Sales' = CALCULATE ( [Net Sales], dim_store[channel_type] = "Online" )
+		formatString: #,0
+		lineageTag: 0fc32f41-e92b-452d-a4d9-be70856166a4
+		displayFolder: 5. Channel
+
+	measure 'Store Net Sales' = CALCULATE ( [Net Sales], dim_store[channel_type] = "Store" )
+		formatString: #,0
+		lineageTag: cc9e31f4-7e78-480d-9de4-eb44303123f8
+		displayFolder: 5. Channel
+
+	measure 'Online Share %' = DIVIDE ( [Online Net Sales], [Net Sales] )
+		formatString: 0.0%
+		lineageTag: 3c0d8e20-da82-442d-a69f-56670c75a362
+		displayFolder: 5. Channel
+
+	measure 'Channel Share of Total %' = DIVIDE ( [Net Sales], CALCULATE ( [Net Sales], REMOVEFILTERS ( dim_store ) ) )
+		formatString: 0.0%
+		lineageTag: c52c5ba0-448a-4a50-96ca-4a1bd7070c2f
+		displayFolder: 5. Channel
+
+	measure Footfall = SUM ( fact_footfall[footfall] )
+		formatString: #,0
+		lineageTag: 0df2a446-3ddd-4465-87bc-3e95c658bebc
+		displayFolder: 6. Store productivity
+
+	measure 'Store Transactions' = CALCULATE ( [Transactions], dim_store[channel_type] = "Store" )
+		formatString: #,0
+		lineageTag: 17db7116-bc23-49fb-a81d-501eeb21a3a9
+		displayFolder: 6. Store productivity
+
+	measure 'Conversion Rate %' = DIVIDE ( [Store Transactions], [Footfall] )
+		formatString: 0.0%
+		lineageTag: 216ea00d-a695-4ad6-9d3e-48082b8fc602
+		displayFolder: 6. Store productivity
+
+	measure 'Selling Area sqm' = SUM ( dim_store[selling_area_sqm] )
+		formatString: #,0
+		lineageTag: e4ddc9af-5a4d-4221-b4eb-18a92f73ade8
+		displayFolder: 6. Store productivity
+
+	measure 'Sales per sqm' = DIVIDE ( [Store Net Sales], [Selling Area sqm] )
+		formatString: #,0
+		lineageTag: 44933023-da08-42cb-aa0e-f76403a63a0e
+		displayFolder: 6. Store productivity
+
+	measure 'Trading Days' = CALCULATE ( DISTINCTCOUNT ( fact_sales[date_key] ), dim_store[channel_type] = "Store" )
+		formatString: #,0
+		lineageTag: 0f7f1e08-c56b-4c8d-a175-1f111ef559ae
+		displayFolder: 6. Store productivity
+
+	measure 'Sales per Trading Day' = DIVIDE ( [Store Net Sales], [Trading Days] )
+		formatString: #,0
+		lineageTag: 9a15f939-eabf-4ac2-9a57-0facc2842c9b
+		displayFolder: 6. Store productivity
+
+	measure 'Stock on Hand' =
+			VAR MaxDate = MAX ( dim_date[date] )
+			VAR LastSnapshot =
+			    CALCULATE (
+			        MAX ( fact_inventory[date_key] ),
+			        REMOVEFILTERS ( dim_date ),
+			        dim_date[date] <= MaxDate
+			    )
+			RETURN
+			    CALCULATE (
+			        SUM ( fact_inventory[stock_on_hand] ),
+			        REMOVEFILTERS ( dim_date ),
+			        fact_inventory[date_key] = LastSnapshot
+			    )
+		formatString: #,0
+		lineageTag: 0527b223-5ca1-43b3-902f-f9fe9294eba8
+		displayFolder: 7. Inventory
+
+	measure 'Stock Value at Cost' =
+			VAR MaxDate = MAX ( dim_date[date] )
+			VAR LastSnapshot =
+			    CALCULATE (
+			        MAX ( fact_inventory[date_key] ),
+			        REMOVEFILTERS ( dim_date ),
+			        dim_date[date] <= MaxDate
+			    )
+			RETURN
+			    CALCULATE (
+			        SUM ( fact_inventory[stock_value_at_cost] ),
+			        REMOVEFILTERS ( dim_date ),
+			        fact_inventory[date_key] = LastSnapshot
+			    )
+		formatString: #,0
+		lineageTag: 98eaad15-5f91-4032-b2c3-1775269315b2
+		displayFolder: 7. Inventory
+
+	measure 'Store Units Sold' = CALCULATE ( [Units Sold], dim_store[channel_type] = "Store" )
+		formatString: #,0
+		lineageTag: 9e7cf6b2-7011-488a-8f69-70130b0814b8
+		displayFolder: 7. Inventory
+
+	measure 'Sell-Through %' = DIVIDE ( [Store Units Sold], [Store Units Sold] + [Stock on Hand] )
+		formatString: 0.0%
+		lineageTag: c254faa6-e7ff-479d-aa3e-134edfc25e76
+		displayFolder: 7. Inventory
+
+	measure 'Avg Weekly Units' = DIVIDE ( [Store Units Sold], DIVIDE ( COUNTROWS ( dim_date ), 7 ) )
+		formatString: #,0.0
+		lineageTag: f17b6fac-fe61-4ab7-8674-8aa006fd059b
+		displayFolder: 7. Inventory
+
+	measure 'Weeks of Cover' = DIVIDE ( [Stock on Hand], [Avg Weekly Units] )
+		formatString: #,0.0
+		lineageTag: 4cdde626-7576-4434-9804-4d6f6317422b
+		displayFolder: 7. Inventory
+
+	measure 'Identified Customers' = CALCULATE ( DISTINCTCOUNT ( fact_sales[customer_key] ), fact_sales[customer_key] <> 0 )
+		formatString: #,0
+		lineageTag: 7bfe9b6b-65fd-4025-bf8c-d5c921c6dc86
+		displayFolder: 8. Customers
+
+	measure 'Identified Sales Share %' = DIVIDE ( CALCULATE ( [Net Sales], fact_sales[customer_key] <> 0 ), [Net Sales] )
+		formatString: 0.0%
+		lineageTag: 7e75d17d-9f1e-45b4-900a-9d9d0046c9e2
+		displayFolder: 8. Customers
+
+	measure 'Loyalty Net Sales' = CALCULATE ( [Net Sales], dim_customer[loyalty_tier] IN { "Silver", "Gold" } )
+		formatString: #,0
+		lineageTag: b187f59c-f480-4bb4-a8dc-af13ba3c18dc
+		displayFolder: 8. Customers
+
+	measure 'Loyalty Share %' = DIVIDE ( [Loyalty Net Sales], [Net Sales] )
+		formatString: 0.0%
+		lineageTag: c07496bb-f5a2-4dca-8a27-ebcc9f4e70db
+		displayFolder: 8. Customers
+
+	measure 'Avg Spend per Identified Customer' = DIVIDE ( CALCULATE ( [Net Sales], fact_sales[customer_key] <> 0 ), [Identified Customers] )
+		formatString: #,0
+		lineageTag: 9e85e704-15e6-45f3-b40a-ee6e484f0243
+		displayFolder: 8. Customers
+
+	measure 'Repeat Customers' =
+			CALCULATE (
+			    COUNTROWS (
+			        FILTER (
+			            SUMMARIZE ( fact_sales, fact_sales[customer_key], "txns", DISTINCTCOUNT ( fact_sales[transaction_id] ) ),
+			            [txns] >= 2 && fact_sales[customer_key] <> 0
+			        )
+			    )
+			)
+		formatString: #,0
+		lineageTag: ee54601e-ba25-4c74-bab0-e70aa542ced8
+		displayFolder: 8. Customers
+
+	measure 'Repeat Rate %' = DIVIDE ( [Repeat Customers], [Identified Customers] )
+		formatString: 0.0%
+		lineageTag: d9e5b787-9a55-48c3-a8ed-5fbb7a8d7212
+		displayFolder: 8. Customers
+
+	measure 'Selected Period Label' =
+			VAR MinD = MIN ( dim_date[date] )
+			VAR MaxD = MAX ( dim_date[date] )
+			RETURN
+			    FORMAT ( MinD, "dd mmm yyyy" ) & " - " & FORMAT ( MaxD, "dd mmm yyyy" )
+		lineageTag: a7b0c225-3e20-405e-af1a-9cabea00f7f4
+		displayFolder: 9. Labels
+
+	measure 'Last Refresh Label' = "Data to " & FORMAT ( CALCULATE ( MAX ( dim_date[date] ), ALL ( dim_date ), fact_sales ), "dd mmm yyyy" )
+		lineageTag: c9e99a91-ae1d-497c-83b6-caf024f9f73a
+		displayFolder: 9. Labels
+
+	measure 'Net Sales Short' =
+			VAR V = [Net Sales]
+			RETURN
+			    SWITCH (
+			        TRUE (),
+			        V >= 1e9, FORMAT ( V / 1e9, "#,0.0" ) & " B",
+			        V >= 1e6, FORMAT ( V / 1e6, "#,0" ) & " M",
+			        FORMAT ( V, "#,0" )
+			    )
+		lineageTag: 5b0b8d87-c9ed-4125-a66f-cd6a8b9aa91a
+		displayFolder: 9. Labels
+
+	column _
+		dataType: string
+		isHidden
+		lineageTag: 30ee7c51-5d26-41e8-98f8-97d09f4c6661
+		summarizeBy: none
+		sourceColumn: _
+
+		annotation SummarizationSetBy = Automatic
+
+	partition _Measures = m
+		mode: import
+		source =
+				let
+				    Source = #table(type table [_ = text], {})
+				in
+				    Source
+
+	annotation PBI_ResultType = Table

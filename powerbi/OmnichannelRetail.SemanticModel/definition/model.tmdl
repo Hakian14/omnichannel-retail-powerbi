@@ -1,0 +1,24 @@
+model Model
+	culture: en-US
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	sourceQueryCulture: en-US
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
+
+annotation PBI_QueryOrder = ["DataFolder", "fnLoadCsv", "dim_date", "dim_month", "dim_store", "dim_product", "dim_customer", "fact_sales", "fact_inventory", "fact_targets", "fact_footfall", "_Measures"]
+
+annotation __PBI_TimeIntelligenceEnabled = 0
+
+annotation PBI_ProTooling = ["DevMode"]
+
+ref table dim_date
+ref table dim_month
+ref table dim_store
+ref table dim_product
+ref table dim_customer
+ref table fact_sales
+ref table fact_inventory
+ref table fact_targets
+ref table fact_footfall
+ref table _Measures

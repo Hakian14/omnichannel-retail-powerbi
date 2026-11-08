@@ -1,0 +1,66 @@
+table dim_customer
+	lineageTag: 5b7524e5-ee38-4852-846d-b52aaec2c677
+
+	column customer_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 10c076df-7156-4445-9121-4a9034ed9dcb
+		summarizeBy: none
+		sourceColumn: customer_key
+		annotation SummarizationSetBy = User
+
+	column customer_id
+		dataType: string
+		lineageTag: bd800194-77d5-45af-845f-ea326880592f
+		summarizeBy: none
+		sourceColumn: customer_id
+		annotation SummarizationSetBy = User
+
+	column loyalty_tier
+		dataType: string
+		lineageTag: c936d9ed-acc9-4720-aa2a-dc002eb295e0
+		summarizeBy: none
+		sourceColumn: loyalty_tier
+		annotation SummarizationSetBy = User
+
+	column gender
+		dataType: string
+		lineageTag: e410db58-9781-4163-be2a-2c93ef67f588
+		summarizeBy: none
+		sourceColumn: gender
+		annotation SummarizationSetBy = User
+
+	column age_band
+		dataType: string
+		lineageTag: fdf5b92e-f779-4602-a88c-a27d1a9aa245
+		summarizeBy: none
+		sourceColumn: age_band
+		annotation SummarizationSetBy = User
+
+	column city
+		dataType: string
+		lineageTag: 4c44068d-f435-4dbe-93f5-a2311cfd2f52
+		summarizeBy: none
+		sourceColumn: city
+		annotation SummarizationSetBy = User
+
+	column join_date
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: 9a18faa5-fee9-4b92-92b7-605427c8f547
+		summarizeBy: none
+		sourceColumn: join_date
+		annotation UnderlyingDateTimeDataType = Date
+		annotation SummarizationSetBy = User
+
+	partition dim_customer = m
+		mode: import
+		source =
+				let
+				    Source = fnLoadCsv("dim_customer.csv", false),
+				    Typed = Table.TransformColumnTypes(Source, {{"customer_key", Int64.Type}, {"customer_id", type text}, {"loyalty_tier", type text}, {"gender", type text}, {"age_band", type text}, {"city", type text}, {"join_date", type date}})
+				in
+				    Typed
+
+	annotation PBI_ResultType = Table

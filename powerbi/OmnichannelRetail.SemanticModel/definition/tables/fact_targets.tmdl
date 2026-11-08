@@ -1,0 +1,38 @@
+table fact_targets
+	lineageTag: 1176968c-4a74-47d5-96b8-ae876ecf7697
+
+	column year_month
+		dataType: string
+		isHidden
+		lineageTag: 36f85499-423c-4853-9ad1-9f8627cc904b
+		summarizeBy: none
+		sourceColumn: year_month
+		annotation SummarizationSetBy = User
+
+	column store_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 7e4f74db-5b1d-4775-99ec-e3f71342cba0
+		summarizeBy: none
+		sourceColumn: store_key
+		annotation SummarizationSetBy = User
+
+	column sales_target
+		dataType: int64
+		formatString: #,0
+		lineageTag: 223fc32b-274b-49ce-88ae-c8b68e17ae5c
+		summarizeBy: none
+		sourceColumn: sales_target
+		annotation SummarizationSetBy = User
+
+	partition fact_targets = m
+		mode: import
+		source =
+				let
+				    Source = fnLoadCsv("fact_targets.csv", false),
+				    Typed = Table.TransformColumnTypes(Source, {{"year_month", type text}, {"store_key", Int64.Type}, {"sales_target", Int64.Type}})
+				in
+				    Typed
+
+	annotation PBI_ResultType = Table

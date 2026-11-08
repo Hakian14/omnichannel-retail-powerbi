@@ -1,7 +1,7 @@
 # Omnichannel Retail Dashboard (Power BI)
 
 [![Power BI](https://img.shields.io/badge/Power%20BI-star%20schema%20%2B%20DAX-F2C811?logo=powerbi&logoColor=black)](model/)
-[![DAX](https://img.shields.io/badge/DAX-56%20measures-6E40C9)](model/measures.dax)
+[![DAX](https://img.shields.io/badge/DAX-54%20measures-6E40C9)](model/measures.dax)
 [![Python](https://img.shields.io/badge/Python-data%20generator-3776AB?logo=python&logoColor=white)](data/generate_data.py)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
@@ -57,7 +57,7 @@ Full column list, grain and the reasoning behind every decision: [`model/data_mo
 
 ## DAX highlights
 
-From [`model/measures.dax`](model/measures.dax) — 56 measures in 9 display folders. A few worth reading:
+From [`model/measures.dax`](model/measures.dax) — 54 measures in 9 display folders. A few worth reading:
 
 ```dax
 // Same-store growth: only stores open for the whole comparison period
@@ -95,9 +95,15 @@ Full write-up: [`model/data_model.md#performance-notes-from-the-real-project`](m
 
 ## Build it yourself
 
-1. `python data/generate_data.py` (optional — the CSVs are committed).
-2. Follow [`docs/build_guide.md`](docs/build_guide.md): Power Query → relationships → measures → theme → pages. ~60–90 min.
-3. Sanity checks are in the guide: `[Net Sales]` for 2025 must equal **118,171,760,000**; `[Target Achievement %]` must show **97.8%**.
+**Fast path (≈10 min to a working model):** open [`powerbi/OmnichannelRetail.pbip`](powerbi/) in Power BI
+Desktop, point the `DataFolder` parameter at `data/star_schema/`, refresh. The project contains the
+whole semantic model as TMDL (tables, Power Query, relationships, date table, all 54 measures) and
+five empty report pages — see [`powerbi/README.md`](powerbi/README.md).
+
+**Manual path:** follow [`docs/build_guide.md`](docs/build_guide.md) step by step (~60–90 min); same
+Power Query and DAX, useful if you want to learn the model by building it.
+
+Sanity checks either way: `[Net Sales]` for 2025 must equal **118,171,760,000**; `[Target Achievement %]` must show **97.8%**.
 
 ## Repository layout
 
@@ -107,14 +113,19 @@ Full write-up: [`model/data_model.md#performance-notes-from-the-real-project`](m
 │   └── star_schema/            # 8 CSVs (two facts gzipped)
 ├── model/
 │   ├── data_model.md           # ERD, grain, modelling decisions, performance notes
-│   ├── measures.dax            # 56 documented measures
+│   ├── measures.dax            # 54 documented measures
 │   └── power_query.pq          # M scripts to load every table
+├── powerbi/
+│   ├── OmnichannelRetail.pbip  # Power BI Project: open in Desktop
+│   ├── OmnichannelRetail.SemanticModel/   # TMDL: tables, relationships, measures
+│   └── OmnichannelRetail.Report/          # 5 report pages (empty)
 ├── report/
 │   ├── report_spec.md          # 5 pages: visuals, measures, findings
 │   ├── theme.json              # report theme
 │   ├── preview_executive_overview.png
 │   └── screenshots/            # Power BI screenshots (added after publishing)
 ├── scripts/
+│   ├── build_pbip.py           # generates the .pbip project from the schema + measures.dax
 │   └── make_preview.py         # renders the preview from the CSVs
 └── docs/
     └── build_guide.md          # step-by-step rebuild in Power BI Desktop

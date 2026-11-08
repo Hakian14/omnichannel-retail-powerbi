@@ -1,0 +1,46 @@
+table dim_month
+	lineageTag: e5907d0e-aa47-40aa-a7c8-bdc1573d412a
+
+	column year_month
+		dataType: string
+		lineageTag: 4e88e255-7a1b-432a-b2bf-fd6bc4a12174
+		summarizeBy: none
+		sourceColumn: year_month
+		annotation SummarizationSetBy = User
+
+	column year
+		dataType: int64
+		formatString: 0
+		lineageTag: ae91feb9-7282-48bf-a854-89a5478df186
+		summarizeBy: none
+		sourceColumn: year
+		annotation SummarizationSetBy = User
+
+	column month_number
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 87d416c9-4820-417a-b33a-2df742c15b90
+		summarizeBy: none
+		sourceColumn: month_number
+		annotation SummarizationSetBy = User
+
+	column month_name
+		dataType: string
+		lineageTag: ed0d853f-ca93-47f0-9686-6b9e844b5252
+		summarizeBy: none
+		sortByColumn: month_number
+		sourceColumn: month_name
+		annotation SummarizationSetBy = User
+
+	partition dim_month = m
+		mode: import
+		source =
+				let
+				    Source = dim_date,
+				    Months = Table.Distinct(Table.SelectColumns(Source, {"year_month", "year", "month_number", "month_name"})),
+				    Sorted = Table.Sort(Months, {{"year_month", Order.Ascending}})
+				in
+				    Sorted
+
+	annotation PBI_ResultType = Table

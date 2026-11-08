@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "SemanticModel",
+    "displayName": "OmnichannelRetail"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "1654f600-0773-4e77-b518-2941f84d7eef"
+  }
+}

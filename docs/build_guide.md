@@ -1,6 +1,10 @@
 # Build guide — from CSVs to the finished report
 
-Estimated time: 60–90 minutes in Power BI Desktop. Nothing here needs a Pro licence.
+> **Shortcut:** `powerbi/OmnichannelRetail.pbip` already contains steps 1–4 below as a Power BI
+> Project. Open it, set the `DataFolder` parameter, refresh, and jump to step 5 (see
+> [`powerbi/README.md`](../powerbi/README.md)). The manual steps remain here for learning or as a fallback.
+
+Estimated time: 60–90 minutes in Power BI Desktop manually; ~10 minutes with the project file. Nothing here needs a Pro licence.
 
 ## 0. Prerequisites
 

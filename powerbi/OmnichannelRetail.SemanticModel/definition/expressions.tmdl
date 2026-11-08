@@ -1,0 +1,17 @@
+expression DataFolder = "C:\repos\omnichannel-retail-powerbi\data\star_schema\" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: a0a9e6b5-7c7c-4475-bdff-e1ad587a5ea4
+
+	annotation PBI_ResultType = Text
+
+expression fnLoadCsv =
+			(fileName as text, optional gzipped as nullable logical) as table =>
+			let
+			    raw = File.Contents(DataFolder & fileName),
+			    bytes = if gzipped = true then Binary.Decompress(raw, Compression.GZip) else raw,
+			    csv = Csv.Document(bytes, [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+			    promoted = Table.PromoteHeaders(csv, [PromoteAllScalars = true])
+			in
+			    promoted
+	lineageTag: a8f719cd-ab75-4f28-840b-1a56320fa25b
+
+	annotation PBI_ResultType = Function

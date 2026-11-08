@@ -1,0 +1,88 @@
+table dim_store
+	lineageTag: 675a4661-76ad-4c10-9947-41cdf8d29645
+
+	column store_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 2cb27ccc-a319-436d-b27d-e19dacc65b03
+		summarizeBy: none
+		sourceColumn: store_key
+		annotation SummarizationSetBy = User
+
+	column store_code
+		dataType: string
+		lineageTag: 24878eac-656f-44c6-8fe1-e3e1dc2a6214
+		summarizeBy: none
+		sourceColumn: store_code
+		annotation SummarizationSetBy = User
+
+	column store_name
+		dataType: string
+		lineageTag: 482357d8-e769-4064-85fc-810161bfc514
+		summarizeBy: none
+		sourceColumn: store_name
+		annotation SummarizationSetBy = User
+
+	column channel_type
+		dataType: string
+		lineageTag: ee111903-f74a-4a9a-b3d7-087cff981fb0
+		summarizeBy: none
+		sourceColumn: channel_type
+		annotation SummarizationSetBy = User
+
+	column channel
+		dataType: string
+		lineageTag: 1de3c66e-7d0e-47df-b0f4-85944e17d549
+		summarizeBy: none
+		sourceColumn: channel
+		annotation SummarizationSetBy = User
+
+	column city
+		dataType: string
+		lineageTag: 6bae824e-7dd8-4f88-b3d4-3b9735f6a161
+		summarizeBy: none
+		sourceColumn: city
+		annotation SummarizationSetBy = User
+
+	column region
+		dataType: string
+		lineageTag: c787ff92-96f4-4509-9b12-d0c1d1213d19
+		summarizeBy: none
+		sourceColumn: region
+		annotation SummarizationSetBy = User
+
+	column store_format
+		dataType: string
+		lineageTag: d1eaa54a-4587-40be-91c1-51c90d717c19
+		summarizeBy: none
+		sourceColumn: store_format
+		annotation SummarizationSetBy = User
+
+	column selling_area_sqm
+		dataType: int64
+		formatString: #,0
+		lineageTag: 4712ce2f-6e1c-46b1-a292-0083d011c7fb
+		summarizeBy: none
+		sourceColumn: selling_area_sqm
+		annotation SummarizationSetBy = User
+
+	column open_date
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: b50c3fdb-275f-4ed7-be90-ca2a87cf23f8
+		summarizeBy: none
+		sourceColumn: open_date
+		annotation UnderlyingDateTimeDataType = Date
+		annotation SummarizationSetBy = User
+
+	partition dim_store = m
+		mode: import
+		source =
+				let
+				    Source = fnLoadCsv("dim_store.csv", false),
+				    Typed = Table.TransformColumnTypes(Source, {{"store_key", Int64.Type}, {"store_code", type text}, {"store_name", type text}, {"channel_type", type text}, {"channel", type text}, {"city", type text}, {"region", type text}, {"store_format", type text}, {"selling_area_sqm", Int64.Type}, {"open_date", type date}})
+				in
+				    Typed
+
+	annotation PBI_ResultType = Table
