@@ -2,7 +2,7 @@
 
 Five pages, each built for one audience and one decision. Every visual lists the measures it
 uses (all defined in [`model/measures.dax`](../model/measures.dax)) so the report can be
-rebuilt exactly, or reviewed by someone who has never opened the `.pbix`.
+rebuilt exactly, or reviewed by someone who does not have Power BI.
 
 Global: a thin **filter bar** at the top of every page with slicers for `dim_date[year_month]`
 (between-style date range), `dim_store[region]`, `dim_store[channel]`, and a sync'd

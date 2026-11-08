@@ -1,10 +1,6 @@
-# Build guide — from CSVs to the finished report
+# Build guide — rebuilding the model in Power BI Desktop
 
-> **Shortcut:** `powerbi/OmnichannelRetail.pbip` already contains steps 1–4 below as a Power BI
-> Project. Open it, set the `DataFolder` parameter, refresh, and jump to step 5 (see
-> [`powerbi/README.md`](../powerbi/README.md)). The manual steps remain here for learning or as a fallback.
-
-Estimated time: 60–90 minutes in Power BI Desktop manually; ~10 minutes with the project file. Nothing here needs a Pro licence.
+Estimated time: 60–90 minutes. Nothing here needs a Pro licence.
 
 ## 0. Prerequisites
 
@@ -81,12 +77,3 @@ Then build the five pages following [`report/report_spec.md`](../report/report_s
 
 - `Home → Publish` to a workspace; set the `DataFolder` parameter on the dataset's settings page if the gateway path differs.
 - For a production version, point `fnLoadCsv` at a SQL view instead of CSVs — the star schema maps 1:1 to a warehouse layer.
-
-## 8. Commit your work
-
-```
-report/omnichannel_retail.pbix        <- the finished file
-report/screenshots/01_executive.png   <- one screenshot per page
-```
-
-Power BI Desktop can also save as a **Power BI Project (.pbip)**, which stores the model as text (TMDL) and the report as JSON — much friendlier for Git diffs. If you use it, commit the whole `.pbip` folder instead of the `.pbix`.

@@ -18,8 +18,7 @@ use in production.
 ![Executive overview preview](report/preview_executive_overview.png)
 
 *Preview of the Executive Overview page rendered from the data with Python (see
-[`scripts/make_preview.py`](scripts/make_preview.py)). Power BI screenshots are in
-[`report/screenshots/`](report/screenshots/) once the `.pbix` is published.*
+[`scripts/make_preview.py`](scripts/make_preview.py)).*
 
 ## What the dashboard answers
 
@@ -93,17 +92,15 @@ hierarchy into one dimension, removing bi-directional relationships, replacing
 turning Auto date/time off, and adding an aggregation table for the executive page.
 Full write-up: [`model/data_model.md#performance-notes-from-the-real-project`](model/data_model.md#performance-notes-from-the-real-project).
 
-## Build it yourself
+## Rebuild the model in Power BI Desktop
 
-**Fast path (≈10 min to a working model):** open [`powerbi/OmnichannelRetail.pbip`](powerbi/) in Power BI
-Desktop, point the `DataFolder` parameter at `data/star_schema/`, refresh. The project contains the
-whole semantic model as TMDL (tables, Power Query, relationships, date table, all 54 measures) and
-five empty report pages — see [`powerbi/README.md`](powerbi/README.md).
+Everything needed is in `model/`: load the tables with [`power_query.pq`](model/power_query.pq),
+create the relationships listed in [`data_model.md`](model/data_model.md), paste the measures from
+[`measures.dax`](model/measures.dax), apply [`report/theme.json`](report/theme.json) and follow
+[`report/report_spec.md`](report/report_spec.md) page by page. Step-by-step notes:
+[`docs/build_guide.md`](docs/build_guide.md).
 
-**Manual path:** follow [`docs/build_guide.md`](docs/build_guide.md) step by step (~60–90 min); same
-Power Query and DAX, useful if you want to learn the model by building it.
-
-Sanity checks either way: `[Net Sales]` for 2025 must equal **118,171,760,000**; `[Target Achievement %]` must show **97.8%**.
+Sanity checks: `[Net Sales]` for 2025 must equal **118,171,760,000**; `[Target Achievement %]` must show **97.8%**.
 
 ## Repository layout
 
@@ -115,20 +112,14 @@ Sanity checks either way: `[Net Sales]` for 2025 must equal **118,171,760,000**;
 │   ├── data_model.md           # ERD, grain, modelling decisions, performance notes
 │   ├── measures.dax            # 54 documented measures
 │   └── power_query.pq          # M scripts to load every table
-├── powerbi/
-│   ├── OmnichannelRetail.pbip  # Power BI Project: open in Desktop
-│   ├── OmnichannelRetail.SemanticModel/   # TMDL: tables, relationships, measures
-│   └── OmnichannelRetail.Report/          # 5 report pages (empty)
 ├── report/
 │   ├── report_spec.md          # 5 pages: visuals, measures, findings
 │   ├── theme.json              # report theme
-│   ├── preview_executive_overview.png
-│   └── screenshots/            # Power BI screenshots (added after publishing)
+│   └── preview_executive_overview.png
 ├── scripts/
-│   ├── build_pbip.py           # generates the .pbip project from the schema + measures.dax
 │   └── make_preview.py         # renders the preview from the CSVs
 └── docs/
-    └── build_guide.md          # step-by-step rebuild in Power BI Desktop
+    └── build_guide.md          # notes for rebuilding the model in Power BI Desktop
 ```
 
 ## About
